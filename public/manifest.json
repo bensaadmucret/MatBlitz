@@ -1,0 +1,16 @@
+{
+  "name": "MatBlitz",
+  "short_name": "MatBlitz",
+  "description": "Entraînement aux puzzles d'échecs avec gamification",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0a0a0f",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml"
+    }
+  ]
+}

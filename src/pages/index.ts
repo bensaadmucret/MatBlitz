@@ -1,0 +1,6 @@
+export { HomePage } from './HomePage'
+export { PlayPage } from './PlayPage'
+export { PuzzlesPage } from './PuzzlesPage'
+export { StatsPage } from './StatsPage'
+export { BadgesPage } from './BadgesPage'
+export { SettingsPage } from './SettingsPage'
