@@ -93,10 +93,6 @@ src/
     └── format.ts       # Utilitaires formatage
 ```
 
-## Sources des puzzles
-
-- **Livre 1** : *1000 exercices et puzzles d'échecs* (202 pages) — 200 mat en 1, 600 mat en 2, 100 mat en 3, 100 mat en 4
-- **Livre 2** : *1000 exercices mat en 2 — Volume 2* (213 pages) — 1000 mat en 2 classés par combinaison de pièces
 
 ## Feuille de route
 
