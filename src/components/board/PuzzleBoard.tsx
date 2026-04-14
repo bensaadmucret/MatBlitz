@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { Chessboard } from 'react-chessboard'
 import { Chess } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -10,7 +10,8 @@ import type { Puzzle } from '../../types'
 
 export function PuzzleBoard() {
   const [puzzleIndex, setPuzzleIndex] = useState(0)
-  const [game, setGame] = useState(new Chess())
+  const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
+  const gameRef = useRef(new Chess())
   const [moveIndex, setMoveIndex] = useState(0)
   const [status, setStatus] = useState<'playing' | 'solved' | 'failed'>('playing')
   const [attempts, setAttempts] = useState(0)
@@ -18,6 +19,7 @@ export function PuzzleBoard() {
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
   const [shakeBoard, setShakeBoard] = useState(false)
   const [showComboAnimation, setShowComboAnimation] = useState(false)
+  const puzzleRef = useRef(puzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
   const currentCombo = useGameStore(s => s.currentCombo)
@@ -28,57 +30,74 @@ export function PuzzleBoard() {
   const totalXp = useGameStore(s => s.totalXp)
   
   const puzzle = puzzles[puzzleIndex % puzzles.length]
-  const { elapsedMs, timeRemaining, isRunning, start, stop, reset, addTime } = useTimer(timerMode, puzzle.difficulty)
+  puzzleRef.current = puzzle
+  const { elapsedMs, timeRemaining, isRunning, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
   
   // Initialize puzzle
   const loadPuzzle = useCallback((p: Puzzle) => {
-    const newGame = new Chess(p.fen)
-    setGame(newGame)
-    setMoveIndex(0)
-    setStatus('playing')
-    setAttempts(0)
-    setLastMove(null)
-    setBoardOrientation(p.sideToMove === 'white' ? 'white' : 'black')
-    resetHints()
-    reset()
-    // Auto-start timer
-    setTimeout(() => start(), 300)
-  }, [reset, resetHints, start])
+    try {
+      const newGame = new Chess(p.fen)
+      gameRef.current = newGame
+      setFen(newGame.fen())
+      setMoveIndex(0)
+      setStatus('playing')
+      setAttempts(0)
+      setLastMove(null)
+      setBoardOrientation(p.sideToMove === 'white' ? 'white' : 'black')
+      resetHints()
+      resetTimer()
+      setTimeout(() => start(), 300)
+    } catch (e) {
+      console.error('Invalid FEN:', p.fen, e)
+    }
+  }, [resetTimer, resetHints, start])
   
   useEffect(() => {
     loadPuzzle(puzzle)
   }, [puzzleIndex]) // eslint-disable-line
   
   // Handle player move
-  const onDrop = useCallback((sourceSquare: string, targetSquare: string): boolean => {
+  function onDrop(sourceSquare: string, targetSquare: string, piece: string): boolean {
     if (status !== 'playing') return false
     
+    const game = gameRef.current
+    const currentPuzzle = puzzleRef.current
+    
     const gameCopy = new Chess(game.fen())
-    const move = gameCopy.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: 'q',
-    })
+    
+    let move
+    try {
+      move = gameCopy.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q',
+      })
+    } catch {
+      return false
+    }
     
     if (!move) return false
     
-    const expectedMove = puzzle.solution[moveIndex]
+    const expectedMove = currentPuzzle.solution[moveIndex]
     const isCorrectMove = move.san === expectedMove
     
     if (isCorrectMove) {
-      const newMoveIndex = moveIndex + 1
-      setGame(gameCopy)
+      // Update game state
+      gameRef.current = gameCopy
+      setFen(gameCopy.fen())
       setLastMove({ from: sourceSquare, to: targetSquare })
+      
+      const newMoveIndex = moveIndex + 1
       setMoveIndex(newMoveIndex)
       
       // Check if puzzle is complete
-      if (newMoveIndex >= puzzle.solution.length) {
+      if (newMoveIndex >= currentPuzzle.solution.length) {
         setStatus('solved')
         stop()
         setAttempts(prev => prev + 1)
         
         addResult({
-          puzzleId: puzzle.id,
+          puzzleId: currentPuzzle.id,
           solved: true,
           timeMs: elapsedMs,
           hintsUsed,
@@ -87,13 +106,11 @@ export function PuzzleBoard() {
           comboBefore: currentCombo,
         })
         
-        // Survival: add bonus time
         if (timerMode === 'survival') {
           const bonusByDifficulty: Record<number, number> = { 1: 5000, 2: 8000, 3: 12000, 4: 15000 }
-          addTime(bonusByDifficulty[puzzle.difficulty])
+          addTime(bonusByDifficulty[currentPuzzle.difficulty])
         }
         
-        // Show combo animation
         if (currentCombo > 0 && (currentCombo + 1) % 5 === 0) {
           setShowComboAnimation(true)
           setTimeout(() => setShowComboAnimation(false), 1500)
@@ -102,33 +119,37 @@ export function PuzzleBoard() {
         return true
       }
       
-      // If there are opponent response moves, play them automatically
-      if (newMoveIndex < puzzle.solution.length) {
+      // Play opponent's response automatically
+      if (newMoveIndex < currentPuzzle.solution.length) {
         setTimeout(() => {
           const responseGame = new Chess(gameCopy.fen())
-          const responseMove = puzzle.solution[newMoveIndex]
-          const responseResult = responseGame.move(responseMove)
-          if (responseResult) {
-            setGame(responseGame)
-            setLastMove({ from: responseResult.from, to: responseResult.to })
-            setMoveIndex(newMoveIndex + 1)
+          try {
+            const responseMove = currentPuzzle.solution[newMoveIndex]
+            const responseResult = responseGame.move(responseMove)
+            if (responseResult) {
+              gameRef.current = responseGame
+              setFen(responseGame.fen())
+              setLastMove({ from: responseResult.from, to: responseResult.to })
+              setMoveIndex(newMoveIndex + 1)
+            }
+          } catch (e) {
+            console.error('Response move error:', e)
           }
         }, 400)
       }
       
       return true
     } else {
-      // Wrong move
+      // Wrong move — reject it
       setShakeBoard(true)
       setTimeout(() => setShakeBoard(false), 400)
       setAttempts(prev => prev + 1)
       
-      // In blitz mode, wrong move = failed
       if (timerMode === 'blitz') {
         setStatus('failed')
         stop()
         addResult({
-          puzzleId: puzzle.id,
+          puzzleId: currentPuzzle.id,
           solved: false,
           timeMs: elapsedMs,
           hintsUsed,
@@ -140,7 +161,7 @@ export function PuzzleBoard() {
       
       return false
     }
-  }, [game, status, moveIndex, puzzle, attempts, hintsUsed, currentCombo, elapsedMs, timerMode, stop, addResult, addTime])
+  }
   
   const nextPuzzle = () => {
     setPuzzleIndex(prev => prev + 1)
@@ -150,22 +171,28 @@ export function PuzzleBoard() {
     loadPuzzle(puzzle)
   }
   
-  const getHint = (level: number) => {
-    incrementHints()
-    // Hints are placeholder — in real app, they'd be per-puzzle
-    const hints = [
-      'Cherche un coup d\'échec !',
-      `La pièce clé est du côté ${puzzle.sideToMove === 'white' ? 'blanc' : 'noir'}.`,
-      `Joue ${puzzle.solution[0]}`,
-    ]
-    return hints[level - 1] || ''
-  }
-  
   const timerProgress = timeRemaining !== null
     ? Math.max(0, (timeRemaining / (timerMode === 'blitz' ? [15000, 30000, 60000, 90000][puzzle.difficulty - 1] : 60000)) * 100)
     : 100
   
   const timerColor = timerProgress > 50 ? 'bg-accent-primary' : timerProgress > 25 ? 'bg-warning' : 'bg-danger'
+  
+  const chessboardOptions = {
+    position: fen,
+    onPieceDrop: onDrop,
+    boardOrientation,
+    customBoardStyle: {
+      borderRadius: '8px',
+      boxShadow: '0 0 30px rgba(124, 58, 237, 0.15)',
+    },
+    customDarkSquareStyle: { backgroundColor: '#2a2a4a' },
+    customLightSquareStyle: { backgroundColor: '#3a3a5a' },
+    customSquareStyles: lastMove ? {
+      [lastMove.from]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
+      [lastMove.to]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
+    } : undefined,
+    areArrowsAllowed: true,
+  }
   
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto">
@@ -176,7 +203,7 @@ export function PuzzleBoard() {
             {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : 'Mat en 4'}
           </span>
           <span className="text-text-muted text-sm">
-            {puzzle.sideToMove === 'white' ? ' Blancs jouent' : ' Noirs jouent'}
+            {puzzle.sideToMove === 'white' ? '⬜ Blancs jouent' : '⬛ Noirs jouent'}
           </span>
         </div>
         <span className="text-text-muted text-xs">#{puzzle.exerciseNumber}</span>
@@ -218,24 +245,7 @@ export function PuzzleBoard() {
       {/* Chess board */}
       <div className={`w-full ${shakeBoard ? 'animate-shake' : ''}`}>
         <div className="relative">
-          <Chessboard
-            options={{
-              position: game.fen(),
-              onPieceDrop: onDrop,
-              boardOrientation,
-              customBoardStyle: {
-                borderRadius: '8px',
-                boxShadow: '0 0 30px rgba(124, 58, 237, 0.15)',
-              },
-              customDarkSquareStyle: { backgroundColor: '#2a2a4a' },
-              customLightSquareStyle: { backgroundColor: '#3a3a5a' },
-              customSquareStyles: lastMove ? {
-                [lastMove.from]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
-                [lastMove.to]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
-              } : undefined,
-              areArrowsAllowed: true,
-            }}
-          />
+          <Chessboard options={chessboardOptions} />
           
           {/* Overlay for solved/failed */}
           <AnimatePresence>
@@ -244,7 +254,7 @@ export function PuzzleBoard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg"
+                className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg z-10"
               >
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
@@ -265,7 +275,7 @@ export function PuzzleBoard() {
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
                 exit={{ opacity: 0 }}
-                className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg"
+                className="absolute inset-0 flex items-center justify-center bg-black/60 rounded-lg z-10"
               >
                 <motion.div
                   initial={{ scale: 0.5, opacity: 0 }}
@@ -289,7 +299,7 @@ export function PuzzleBoard() {
             initial={{ scale: 0, opacity: 1 }}
             animate={{ scale: 2, opacity: 0 }}
             exit={{ opacity: 0 }}
-            duration={1.5}
+            transition={{ duration: 1.5 }}
             className="absolute text-8xl pointer-events-none"
           >
             🔥

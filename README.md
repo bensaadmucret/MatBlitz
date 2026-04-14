@@ -4,7 +4,7 @@ Entraînement interactif aux puzzles d'échecs avec gamification.
 
 ## À propos
 
-MatBlitz est une app d'entraînement aux puzzles d'échecs basée sur les livres **1000 Exercices et Puzzles d'Échecs** et **1000 Exercices Mat en 2 (Vol. 2)**. Résous des puzzles de mat en 1, 2, 3 et 4 coups, progresse avec le système de gamification et suis ta courbe d'amélioration.
+MatBlitz est une app d'entraînement aux puzzles d'échecs. Résous des puzzles de mat en 1, 2, 3 et 4 coups, progresse avec le système de gamification et suis ta courbe d'amélioration.
 
 ## Stack
 
