@@ -57,7 +57,7 @@ export function PuzzleBoard() {
   }, [puzzleIndex]) // eslint-disable-line
   
   // Handle player move
-  function onDrop(sourceSquare: string, targetSquare: string, piece: string): boolean {
+  function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }): boolean {
     if (status !== 'playing') return false
     
     const game = gameRef.current
