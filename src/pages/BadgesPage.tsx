@@ -8,11 +8,14 @@ export function BadgesPage() {
   const [unlockedBadges, setUnlockedBadges] = useState<Badge[]>([])
 
   useEffect(() => {
-    try {
-      setUnlockedBadges(queries.getUnlockedBadges())
-    } catch (e) {
-      console.error('Failed to load badges:', e)
-    }
+    ;(async () => {
+      try {
+        const badges = await queries.getUnlockedBadges()
+        setUnlockedBadges(badges)
+      } catch (e) {
+        console.error('Failed to load badges:', e)
+      }
+    })()
   }, [])
 
   const unlockedIds = new Set(unlockedBadges.map(b => b.id))

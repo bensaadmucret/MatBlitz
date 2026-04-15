@@ -11,6 +11,7 @@ interface GameState {
   // XP & Levels
   totalXp: number
   getPuzzleXp: (difficulty: number, timeMs: number, hintsUsed: number, firstTry: boolean, combo: number) => number
+  addXp: (amount: number) => Promise<void>
 
   // Results
   currentCombo: number
@@ -20,6 +21,14 @@ interface GameState {
   timerMode: TimerMode
   setTimerMode: (mode: TimerMode) => void
 
+  // Game status
+  isPlaying: boolean
+  setIsPlaying: (playing: boolean) => void
+
+  // Badge notifications
+  lastUnlockedBadges: Badge[] | null
+  clearLastUnlockedBadges: () => void
+
   // Hints
   hintsUsedForCurrentPuzzle: number
   incrementHints: () => void
@@ -28,12 +37,12 @@ interface GameState {
   // Actions
   addResult: (result: PuzzleResult) => void
 
-  // Computed (read from DB)
-  getTotalSolved: () => number
-  getAverageTime: () => number
-  getSuccessRate: () => number
-  getFastestSolve: () => number
-  getStreak: () => DailyStreak
+  // Computed (read from DB — now async)
+  getTotalSolved: () => Promise<number>
+  getAverageTime: () => Promise<number>
+  getSuccessRate: () => Promise<number>
+  getFastestSolve: () => Promise<number>
+  getStreak: () => Promise<DailyStreak>
   getLevelInfo: () => {
     tier: LevelTier
     tierIndex: number
@@ -45,8 +54,8 @@ interface GameState {
     xpForNextLevel: number
     progress: number
   }
-  getUnlockedBadges: () => Badge[]
-  getSolvedPuzzleIds: () => Set<string>
+  getUnlockedBadges: () => Promise<Badge[]>
+  getSolvedPuzzleIds: () => Promise<Set<string>>
 }
 
 const TIER_CONFIG: { tier: LevelTier; emoji: string; title: string; levels: number }[] = [
@@ -67,13 +76,15 @@ export const useGameStore = create<GameState>()((set, get) => ({
   bestCombo: 0,
   hintsUsedForCurrentPuzzle: 0,
   timerMode: 'free',
+  isPlaying: false,
+  lastUnlockedBadges: null,
 
   loadFromDB: async () => {
     try {
-      const xp = parseInt(queries.getGameState('totalXp') || '0')
-      const combo = parseInt(queries.getGameState('currentCombo') || '0')
-      const bestCombo = parseInt(queries.getGameState('bestCombo') || '0')
-      const timerMode = (queries.getSetting('timerMode', 'free')) as TimerMode
+      const xp = parseInt((await queries.getGameState('totalXp')) || '0')
+      const combo = parseInt((await queries.getGameState('currentCombo')) || '0')
+      const bestCombo = parseInt((await queries.getGameState('bestCombo')) || '0')
+      const timerMode = (await queries.getSetting('timerMode', 'free')) as TimerMode
 
       set({
         totalXp: xp,
@@ -92,68 +103,101 @@ export const useGameStore = create<GameState>()((set, get) => ({
     let base = difficulty * 20
     if (firstTry) base = Math.floor(base * 1.5)
     if (timeMs < 5000) base = Math.floor(base * 1.3)
-    if (timeMs < 10000) base = Math.floor(base * 1.1)
-    const hintPenalty = hintsUsed * 0.3
-    base = Math.floor(base * (1 - hintPenalty))
-    const comboMultiplier = Math.min(1 + combo * 0.2, 3)
-    return Math.max(Math.floor(base * comboMultiplier), 5)
+    if (timeMs > 30000) base = Math.floor(base * 0.8)
+    if (hintsUsed > 0) base = Math.floor(base * (1 - hintsUsed * 0.25))
+    if (combo > 5) base = Math.floor(base * (1 + combo * 0.1))
+    return Math.max(5, base)
+  },
+
+  addXp: async (amount: number) => {
+    const state = get()
+    const newXp = Math.max(0, state.totalXp + amount)
+    await queries.setGameState('totalXp', String(newXp))
+    set({ totalXp: newXp })
   },
 
   addResult: (result) => {
-    // Write to SQLite
-    queries.insertResult(result)
+    // Fire and forget — write to SQLite async
+    ;(async () => {
+      await queries.insertResult(result)
 
-    const state = get()
-    const newCombo = result.solved ? state.currentCombo + 1 : 0
-    const newBestCombo = Math.max(state.bestCombo, newCombo)
+      const state = get()
+      const newCombo = result.solved ? state.currentCombo + 1 : 0
+      const newBestCombo = Math.max(state.bestCombo, newCombo)
 
-    let xpGain = 0
-    if (result.solved) {
-      const diff = result.puzzleId.includes('mat1') ? 1 : result.puzzleId.includes('mat2') ? 2 : result.puzzleId.includes('mat3') ? 3 : 4
-      xpGain = state.getPuzzleXp(diff, result.timeMs, result.hintsUsed, result.attempts === 1, state.currentCombo)
+      let xpGain = 0
+      if (result.solved) {
+        const diff = result.puzzleId.includes('mat1') ? 1 : result.puzzleId.includes('mat2') ? 2 : result.puzzleId.includes('mat3') ? 3 : 4
+        xpGain = state.getPuzzleXp(diff, result.timeMs, result.hintsUsed, result.attempts === 1, state.currentCombo)
 
-      // Record daily streak
-      queries.recordDailySolve()
-    }
-
-    const newXp = state.totalXp + xpGain
-
-    // Persist state to SQLite
-    queries.setGameState('totalXp', String(newXp))
-    queries.setGameState('currentCombo', String(newCombo))
-    queries.setGameState('bestCombo', String(newBestCombo))
-
-    set({
-      totalXp: newXp,
-      currentCombo: newCombo,
-      bestCombo: newBestCombo,
-    })
-
-    // Check badges
-    const totalSolved = queries.getTotalSolved()
-    const fastest = queries.getFastestSolve()
-    const streak = queries.getStreak()
-    const hour = new Date().getHours()
-    const unlockedIds = new Set(queries.getUnlockedBadges().map(b => b.id))
-
-    for (const badge of allBadges) {
-      if (unlockedIds.has(badge.id)) continue
-
-      let shouldUnlock = false
-      switch (badge.id) {
-        case 'first-blood': shouldUnlock = totalSolved >= 1; break
-        case 'on-fire': shouldUnlock = newCombo >= 10; break
-        case 'lightning': shouldUnlock = fastest > 0 && fastest < 5000; break
-        case 'night-owl': shouldUnlock = hour >= 0 && hour < 6; break
-        case 'week-warrior': shouldUnlock = streak.current >= 7; break
-        case 'centurion': shouldUnlock = totalSolved >= 100; break
-        case 'grandmaster': shouldUnlock = totalSolved >= 2000; break
+        await queries.recordDailySolve()
       }
 
-      if (shouldUnlock) {
-        queries.unlockBadge({ ...badge, unlockedAt: Date.now() })
+      const newXp = state.totalXp + xpGain
+
+      await queries.setGameState('totalXp', String(newXp))
+      await queries.setGameState('currentCombo', String(newCombo))
+      await queries.setGameState('bestCombo', String(newBestCombo))
+
+      set({
+        totalXp: newXp,
+        currentCombo: newCombo,
+        bestCombo: newBestCombo,
+      })
+
+      // Check badges
+      const totalSolved = await queries.getTotalSolved()
+      const fastest = await queries.getFastestSolve()
+      const streak = await queries.getStreak()
+      const hour = new Date().getHours()
+      const unlockedIds = new Set((await queries.getUnlockedBadges()).map(b => b.id))
+
+      console.log('🔍 Checking badges:', { totalSolved, fastest, newCombo, hour, unlockedIds: [...unlockedIds] })
+
+      const newlyUnlocked: Badge[] = []
+
+      for (const badge of allBadges) {
+        if (unlockedIds.has(badge.id)) continue
+
+        let shouldUnlock = false
+        switch (badge.id) {
+          case 'first-blood':
+            shouldUnlock = totalSolved >= 1
+            break
+          case 'on-fire':
+            shouldUnlock = newCombo >= 10
+            break
+          case 'lightning':
+            shouldUnlock = fastest > 0 && fastest < 5000
+            break
+          case 'night-owl':
+            shouldUnlock = hour >= 0 && hour < 6
+            break
+          case 'week-warrior':
+            shouldUnlock = streak.current >= 7
+            break
+          case 'centurion':
+            shouldUnlock = totalSolved >= 100
+            break
+          case 'grandmaster':
+            shouldUnlock = totalSolved >= 2000
+            break
+        }
+
+        console.log(`  → Badge ${badge.id}: ${shouldUnlock ? '✅ UNLOCKED' : '❌ not yet'}`)
+
+        if (shouldUnlock) {
+          await queries.unlockBadge({ ...badge, unlockedAt: Date.now() })
+          newlyUnlocked.push(badge)
+        }
       }
-    }
+
+      // Store newly unlocked badges for notification
+      if (newlyUnlocked.length > 0) {
+        set({ lastUnlockedBadges: newlyUnlocked })
+        console.log('🎉 New badges unlocked:', newlyUnlocked.map(b => b.name))
+      }
+    })()
   },
 
   incrementHints: () => set(s => ({ hintsUsedForCurrentPuzzle: s.hintsUsedForCurrentPuzzle + 1 })),
@@ -163,6 +207,10 @@ export const useGameStore = create<GameState>()((set, get) => ({
     queries.setSetting('timerMode', mode)
     set({ timerMode: mode })
   },
+
+  setIsPlaying: (playing) => set({ isPlaying: playing }),
+
+  clearLastUnlockedBadges: () => set({ lastUnlockedBadges: null }),
 
   getTotalSolved: () => queries.getTotalSolved(),
   getAverageTime: () => queries.getAverageTime(),

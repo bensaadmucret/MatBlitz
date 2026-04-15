@@ -1,85 +1,96 @@
-import { getDB, scheduleSave } from './database'
+import { getDB } from './database'
 import type { PuzzleResult, DailyStreak, Badge } from '../types'
+
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+interface DbRow extends Record<string, any> {}
 
 // ===== PUZZLE RESULTS =====
 
-export function insertResult(result: PuzzleResult): void {
+export async function insertResult(result: PuzzleResult): Promise<void> {
   const db = getDB()
-  db.run(
+  await db.execute(
     `INSERT INTO puzzle_results (puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp)
-     VALUES (?, ?, ?, ?, ?, ?, ?)`,
+     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
     [result.puzzleId, result.solved ? 1 : 0, result.timeMs, result.hintsUsed, result.attempts, result.comboBefore, result.timestamp]
   )
-  scheduleSave()
 }
 
-export function getAllResults(): PuzzleResult[] {
+export async function getAllResults(): Promise<PuzzleResult[]> {
   const db = getDB()
-  const rows = db.exec('SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results ORDER BY timestamp')
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    puzzleId: row[0] as string,
-    solved: (row[1] as number) === 1,
-    timeMs: row[2] as number,
-    hintsUsed: row[3] as number,
-    attempts: row[4] as number,
-    comboBefore: row[5] as number,
-    timestamp: row[6] as number,
+  const rows = await db.select<DbRow[]>(
+    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results ORDER BY timestamp'
+  )
+  return rows.map(row => ({
+    puzzleId: row.puzzle_id as string,
+    solved: row.solved === 1,
+    timeMs: row.time_ms as number,
+    hintsUsed: row.hints_used as number,
+    attempts: row.attempts as number,
+    comboBefore: row.combo_before as number,
+    timestamp: row.timestamp as number,
   }))
 }
 
-export function getSolvedPuzzleIds(): Set<string> {
+export async function getSolvedPuzzleIds(): Promise<Set<string>> {
   const db = getDB()
-  const rows = db.exec('SELECT DISTINCT puzzle_id FROM puzzle_results WHERE solved = 1')
-  if (rows.length === 0) return new Set()
-  return new Set(rows[0].values.map(r => r[0] as string))
+  const rows = await db.select<DbRow[]>(
+    'SELECT DISTINCT puzzle_id FROM puzzle_results WHERE solved = 1'
+  )
+  return new Set(rows.map(r => r.puzzle_id as string))
 }
 
-export function getTotalSolved(): number {
+export async function getTotalSolved(): Promise<number> {
   const db = getDB()
-  const rows = db.exec('SELECT COUNT(DISTINCT puzzle_id) FROM puzzle_results WHERE solved = 1')
-  return rows.length > 0 ? (rows[0].values[0][0] as number) : 0
+  const rows = await db.select<DbRow[]>(
+    'SELECT COUNT(DISTINCT puzzle_id) as cnt FROM puzzle_results WHERE solved = 1'
+  )
+  return rows.length > 0 ? (rows[0].cnt as number) : 0
 }
 
-export function getAverageTime(): number {
+export async function getAverageTime(): Promise<number> {
   const db = getDB()
-  const rows = db.exec('SELECT AVG(time_ms) FROM puzzle_results WHERE solved = 1')
-  return rows.length > 0 ? Math.round((rows[0].values[0][0] as number) || 0) : 0
+  const rows = await db.select<DbRow[]>(
+    'SELECT AVG(time_ms) as avg FROM puzzle_results WHERE solved = 1'
+  )
+  return rows.length > 0 ? Math.round((rows[0].avg as number) || 0) : 0
 }
 
-export function getSuccessRate(): number {
+export async function getSuccessRate(): Promise<number> {
   const db = getDB()
-  const rows = db.exec('SELECT CAST(SUM(CASE WHEN solved=1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100 FROM puzzle_results')
-  return rows.length > 0 ? Math.round((rows[0].values[0][0] as number) || 0) : 0
+  const rows = await db.select<DbRow[]>(
+    'SELECT CAST(SUM(CASE WHEN solved=1 THEN 1 ELSE 0 END) AS FLOAT) / COUNT(*) * 100 as rate FROM puzzle_results'
+  )
+  return rows.length > 0 ? Math.round((rows[0].rate as number) || 0) : 0
 }
 
-export function getFastestSolve(): number {
+export async function getFastestSolve(): Promise<number> {
   const db = getDB()
-  const rows = db.exec('SELECT MIN(time_ms) FROM puzzle_results WHERE solved = 1 AND time_ms > 0')
-  return rows.length > 0 ? ((rows[0].values[0][0] as number) || 0) : 0
+  const rows = await db.select<DbRow[]>(
+    'SELECT MIN(time_ms) as fastest FROM puzzle_results WHERE solved = 1 AND time_ms > 0'
+  )
+  return rows.length > 0 ? ((rows[0].fastest as number) || 0) : 0
 }
 
-export function getResultsByDateRange(startTs: number, endTs: number): PuzzleResult[] {
+export async function getResultsByDateRange(startTs: number, endTs: number): Promise<PuzzleResult[]> {
   const db = getDB()
-  const rows = db.exec(
-    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results WHERE timestamp >= ? AND timestamp <= ? ORDER BY timestamp',
+  const rows = await db.select<DbRow[]>(
+    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results WHERE timestamp >= $1 AND timestamp <= $2 ORDER BY timestamp',
     [startTs, endTs]
   )
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    puzzleId: row[0] as string,
-    solved: (row[1] as number) === 1,
-    timeMs: row[2] as number,
-    hintsUsed: row[3] as number,
-    attempts: row[4] as number,
-    comboBefore: row[5] as number,
-    timestamp: row[6] as number,
+  return rows.map(row => ({
+    puzzleId: row.puzzle_id as string,
+    solved: row.solved === 1,
+    timeMs: row.time_ms as number,
+    hintsUsed: row.hints_used as number,
+    attempts: row.attempts as number,
+    comboBefore: row.combo_before as number,
+    timestamp: row.timestamp as number,
   }))
 }
 
-export function getTimeDistribution(): { label: string; count: number }[] {
+export async function getTimeDistribution(): Promise<{ label: string; count: number }[]> {
   const db = getDB()
-  const rows = db.exec(`
+  const rows = await db.select<DbRow[]>(`
     SELECT
       CASE
         WHEN time_ms < 5000 THEN '<5s'
@@ -94,33 +105,31 @@ export function getTimeDistribution(): { label: string; count: number }[] {
     GROUP BY bucket
     ORDER BY MIN(time_ms)
   `)
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    label: row[0] as string,
-    count: row[1] as number,
+  return rows.map(row => ({
+    label: row.bucket as string,
+    count: row.count as number,
   }))
 }
 
-export function getHeatmapData(days: number = 90): { date: string; count: number }[] {
+export async function getHeatmapData(days: number = 90): Promise<{ date: string; count: number }[]> {
   const db = getDB()
   const since = Date.now() - days * 86400000
-  const rows = db.exec(`
+  const rows = await db.select<DbRow[]>(`
     SELECT date(timestamp/1000, 'unixepoch') as day, COUNT(*) as count
     FROM puzzle_results
-    WHERE solved = 1 AND timestamp >= ?
+    WHERE solved = 1 AND timestamp >= $1
     GROUP BY day
     ORDER BY day
   `, [since])
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    date: row[0] as string,
-    count: row[1] as number,
+  return rows.map(row => ({
+    date: row.day as string,
+    count: row.count as number,
   }))
 }
 
-export function getCategoryStats(): { category: string; solved: number; total: number; avgTime: number }[] {
+export async function getCategoryStats(): Promise<{ category: string; solved: number; total: number; avgTime: number }[]> {
   const db = getDB()
-  const rows = db.exec(`
+  const rows = await db.select<DbRow[]>(`
     SELECT
       SUBSTR(puzzle_id, 1, INSTR(puzzle_id, '-') - 1) as cat,
       COUNT(DISTINCT CASE WHEN solved=1 THEN puzzle_id END) as solved,
@@ -129,72 +138,76 @@ export function getCategoryStats(): { category: string; solved: number; total: n
     FROM puzzle_results
     GROUP BY cat
   `)
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    category: row[0] as string,
-    solved: row[1] as number,
-    total: row[2] as number,
-    avgTime: Math.round((row[3] as number) || 0),
+  return rows.map(row => ({
+    category: row.cat as string,
+    solved: row.solved as number,
+    total: row.total as number,
+    avgTime: Math.round((row.avg_time as number) || 0),
   }))
 }
 
 // ===== GAME STATE =====
 
-export function getGameState(key: string): string | null {
+export async function getGameState(key: string): Promise<string | null> {
   const db = getDB()
-  const rows = db.exec('SELECT value FROM game_state WHERE key = ?', [key])
-  return rows.length > 0 ? (rows[0].values[0][0] as string) : null
+  const rows = await db.select<DbRow[]>(
+    'SELECT value FROM game_state WHERE key = $1',
+    [key]
+  )
+  return rows.length > 0 ? (rows[0].value as string) : null
 }
 
-export function setGameState(key: string, value: string): void {
+export async function setGameState(key: string, value: string): Promise<void> {
   const db = getDB()
-  db.run('INSERT OR REPLACE INTO game_state (key, value) VALUES (?, ?)', [key, value])
-  scheduleSave()
+  await db.execute(
+    'INSERT OR REPLACE INTO game_state (key, value) VALUES ($1, $2)',
+    [key, value]
+  )
 }
 
 // ===== BADGES =====
 
-export function getUnlockedBadges(): Badge[] {
+export async function getUnlockedBadges(): Promise<Badge[]> {
   const db = getDB()
-  const rows = db.exec('SELECT id, name, emoji, description, unlocked_at FROM badges WHERE unlocked_at IS NOT NULL')
-  if (rows.length === 0) return []
-  return rows[0].values.map(row => ({
-    id: row[0] as string,
-    name: row[1] as string,
-    emoji: row[2] as string,
-    description: row[3] as string,
-    unlockedAt: row[4] as number,
+  const rows = await db.select<DbRow[]>(
+    'SELECT id, name, emoji, description, condition, unlocked_at FROM badges WHERE unlocked_at IS NOT NULL'
+  )
+  return rows.map(row => ({
+    id: row.id as string,
+    name: row.name as string,
+    emoji: row.emoji as string,
+    description: row.description as string,
+    condition: row.condition as string,
+    unlockedAt: row.unlocked_at as number,
   }))
 }
 
-export function unlockBadge(badge: Badge): void {
+export async function unlockBadge(badge: Badge): Promise<void> {
   const db = getDB()
-  db.run(
-    'INSERT OR REPLACE INTO badges (id, name, emoji, description, unlocked_at) VALUES (?, ?, ?, ?, ?)',
+  await db.execute(
+    'INSERT OR REPLACE INTO badges (id, name, emoji, description, unlocked_at) VALUES ($1, $2, $3, $4, $5)',
     [badge.id, badge.name, badge.emoji, badge.description, badge.unlockedAt || Date.now()]
   )
-  scheduleSave()
 }
 
 // ===== DAILY STREAK =====
 
-export function getStreak(): DailyStreak {
+export async function getStreak(): Promise<DailyStreak> {
   const db = getDB()
-  const rows = db.exec(`
+  const rows = await db.select<DbRow[]>(`
     SELECT date, puzzles_solved FROM daily_streak ORDER BY date DESC LIMIT 100
   `)
 
   if (rows.length === 0) return { current: 0, longest: 0, lastDate: '' }
 
-  const entries = rows[0].values.map(row => ({
-    date: row[0] as string,
-    count: row[1] as number,
+  const entries = rows.map(row => ({
+    date: row.date as string,
+    count: row.puzzles_solved as number,
   }))
 
-  // Calculate current streak from today backwards
   const today = new Date().toISOString().split('T')[0]
   let current = 0
-  let checkDate = new Date()
+  const checkDate = new Date()
 
   for (let i = 0; i < 365; i++) {
     const dateStr = checkDate.toISOString().split('T')[0]
@@ -203,7 +216,6 @@ export function getStreak(): DailyStreak {
       current++
       checkDate.setDate(checkDate.getDate() - 1)
     } else if (dateStr === today) {
-      // Today not yet completed, check yesterday
       checkDate.setDate(checkDate.getDate() - 1)
       continue
     } else {
@@ -211,44 +223,47 @@ export function getStreak(): DailyStreak {
     }
   }
 
-  const longest = entries.length > 0 ? entries.length : 0
+  const longest = entries.length
   const lastDate = entries.length > 0 ? entries[0].date : ''
 
   return { current, longest, lastDate }
 }
 
-export function recordDailySolve(): void {
+export async function recordDailySolve(): Promise<void> {
   const today = new Date().toISOString().split('T')[0]
   const db = getDB()
-  db.run(
-    'INSERT INTO daily_streak (date, puzzles_solved) VALUES (?, 1) ON CONFLICT(date) DO UPDATE SET puzzles_solved = puzzles_solved + 1',
+  await db.execute(
+    'INSERT INTO daily_streak (date, puzzles_solved) VALUES ($1, 1) ON CONFLICT(date) DO UPDATE SET puzzles_solved = puzzles_solved + 1',
     [today]
   )
-  scheduleSave()
 }
 
 // ===== SETTINGS =====
 
-export function getSetting(key: string, defaultValue: string = ''): string {
+export async function getSetting(key: string, defaultValue: string = ''): Promise<string> {
   const db = getDB()
-  const rows = db.exec('SELECT value FROM settings WHERE key = ?', [key])
-  return rows.length > 0 ? (rows[0].values[0][0] as string) : defaultValue
+  const rows = await db.select<DbRow[]>(
+    'SELECT value FROM settings WHERE key = $1',
+    [key]
+  )
+  return rows.length > 0 ? (rows[0].value as string) : defaultValue
 }
 
-export function setSetting(key: string, value: string): void {
+export async function setSetting(key: string, value: string): Promise<void> {
   const db = getDB()
-  db.run('INSERT OR REPLACE INTO settings (key, value) VALUES (?, ?)', [key, value])
-  scheduleSave()
+  await db.execute(
+    'INSERT OR REPLACE INTO settings (key, value) VALUES ($1, $2)',
+    [key, value]
+  )
 }
 
 // ===== RESET =====
 
-export function resetAllData(): void {
+export async function resetAllData(): Promise<void> {
   const db = getDB()
-  db.run('DELETE FROM puzzle_results')
-  db.run('DELETE FROM game_state')
-  db.run('DELETE FROM badges')
-  db.run('DELETE FROM daily_streak')
-  db.run('DELETE FROM settings')
-  scheduleSave()
+  await db.execute('DELETE FROM puzzle_results')
+  await db.execute('DELETE FROM game_state')
+  await db.execute('DELETE FROM badges')
+  await db.execute('DELETE FROM daily_streak')
+  await db.execute('DELETE FROM settings')
 }

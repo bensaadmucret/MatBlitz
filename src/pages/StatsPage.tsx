@@ -25,50 +25,55 @@ export function StatsPage() {
   })
 
   useEffect(() => {
-    try {
-      const totalSolved = queries.getTotalSolved()
-      const successRate = queries.getSuccessRate()
-      const avgTime = queries.getAverageTime()
-      const fastestTime = queries.getFastestSolve()
-      const streak = queries.getStreak()
-      const heatmap = queries.getHeatmapData(90)
-      const timeDistribution = queries.getTimeDistribution()
+    ;(async () => {
+      try {
+        const [totalSolved, successRate, avgTime, fastestTime, streak, heatmap, timeDistribution] = await Promise.all([
+          queries.getTotalSolved(),
+          queries.getSuccessRate(),
+          queries.getAverageTime(),
+          queries.getFastestSolve(),
+          queries.getStreak(),
+          queries.getHeatmapData(90),
+          queries.getTimeDistribution(),
+        ])
 
-      // Get results for median and trend calculations
-      const now = Date.now()
-      const weekAgo = now - 7 * 86400000
-      const twoWeeksAgo = now - 14 * 86400000
+        const now = Date.now()
+        const weekAgo = now - 7 * 86400000
+        const twoWeeksAgo = now - 14 * 86400000
 
-      const recentResults = queries.getResultsByDateRange(weekAgo, now)
-      const olderResults = queries.getResultsByDateRange(twoWeeksAgo, weekAgo)
+        const [recentResults, olderResults, allResults] = await Promise.all([
+          queries.getResultsByDateRange(weekAgo, now),
+          queries.getResultsByDateRange(twoWeeksAgo, weekAgo),
+          queries.getResultsByDateRange(0, now),
+        ])
 
-      const recentSolved = recentResults.filter(r => r.solved)
-      const olderSolved = olderResults.filter(r => r.solved)
-      const allSolved = queries.getResultsByDateRange(0, now).filter(r => r.solved)
+        const recentSolved = recentResults.filter(r => r.solved)
+        const olderSolved = olderResults.filter(r => r.solved)
+        const allSolved = allResults.filter(r => r.solved)
 
-      const sortedTimes = allSolved.map(r => r.timeMs).sort((a, b) => a - b)
-      const medianTime = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length / 2)] : 0
+        const sortedTimes = allSolved.map(r => r.timeMs).sort((a, b) => a - b)
+        const medianTime = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length / 2)] : 0
 
-      const recentAvg = recentSolved.length > 0 ? Math.round(recentSolved.reduce((a, r) => a + r.timeMs, 0) / recentSolved.length) : 0
-      const olderAvg = olderSolved.length > 0 ? Math.round(olderSolved.reduce((a, r) => a + r.timeMs, 0) / olderSolved.length) : 0
+        const recentAvg = recentSolved.length > 0 ? Math.round(recentSolved.reduce((a, r) => a + r.timeMs, 0) / recentSolved.length) : 0
+        const olderAvg = olderSolved.length > 0 ? Math.round(olderSolved.reduce((a, r) => a + r.timeMs, 0) / olderSolved.length) : 0
 
-      const perfectSolves = allSolved.filter(r => r.attempts === 1 && r.hintsUsed === 0).length
-      const totalAttempts = queries.getResultsByDateRange(0, now).length
-      const totalHints = queries.getResultsByDateRange(0, now).reduce((a, r) => a + r.hintsUsed, 0)
+        const perfectSolves = allSolved.filter(r => r.attempts === 1 && r.hintsUsed === 0).length
+        const totalAttempts = allResults.length
+        const totalHints = allResults.reduce((a, r) => a + r.hintsUsed, 0)
 
-      setStats({
-        totalSolved, successRate, avgTime, fastestTime, medianTime,
-        heatmap, timeDistribution, recentAvg, olderAvg,
-        perfectSolves, totalAttempts, totalHints, streak,
-      })
-    } catch (e) {
-      console.error('Failed to load stats:', e)
-    }
+        setStats({
+          totalSolved, successRate, avgTime, fastestTime, medianTime,
+          heatmap, timeDistribution, recentAvg, olderAvg,
+          perfectSolves, totalAttempts, totalHints, streak,
+        })
+      } catch (e) {
+        console.error('Failed to load stats:', e)
+      }
+    })()
   }, [])
 
   const levelInfo = getLevelInfo()
 
-  // Build full 90-day heatmap with zeros
   const fullHeatmap = useMemo(() => {
     const now = new Date()
     const result: { date: string; count: number }[] = []
@@ -86,7 +91,6 @@ export function StatsPage() {
     <div className="space-y-6 md:ml-16">
       <h2 className="text-xl font-bold text-text-primary">Statistiques</h2>
 
-      {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Puzzles résolus" value={stats.totalSolved.toString()} />
         <StatCard label="Taux de réussite" value={`${stats.successRate}%`} />
@@ -96,7 +100,6 @@ export function StatsPage() {
         <StatCard label="Parfait (1er coup)" value={stats.perfectSolves.toString()} />
       </div>
 
-      {/* Level & XP */}
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">{levelInfo.emoji} Niveau {levelInfo.title} {levelInfo.levelInTier}</h3>
@@ -113,7 +116,6 @@ export function StatsPage() {
         </div>
       </div>
 
-      {/* Streak */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-3">🔥 Streak</h3>
         <div className="flex gap-6">
@@ -132,7 +134,6 @@ export function StatsPage() {
         </div>
       </div>
 
-      {/* Heatmap */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-4">📅 Activité (90 jours)</h3>
         <div className="flex flex-wrap gap-[3px]">
@@ -157,7 +158,6 @@ export function StatsPage() {
         </div>
       </div>
 
-      {/* Time distribution */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-4">⏱️ Répartition des temps</h3>
         <div className="space-y-2">
@@ -182,7 +182,6 @@ export function StatsPage() {
         </div>
       </div>
 
-      {/* Trend */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-3">📈 Tendance</h3>
         <div className="grid grid-cols-2 gap-4">
@@ -209,7 +208,6 @@ export function StatsPage() {
         )}
       </div>
 
-      {/* Extra stats */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-3">📋 Détails</h3>
         <div className="grid grid-cols-2 gap-4">

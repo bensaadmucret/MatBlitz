@@ -1,16 +1,24 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../stores/gameStore'
 import { categories, subcategories, allPuzzles } from '../data/index'
 
 export function PuzzlesPage() {
-  const solvedPuzzleIds = useGameStore(s => s.solvedPuzzleIds)
-  
+  const getSolvedPuzzleIds = useGameStore(s => s.getSolvedPuzzleIds)
+  const isLoaded = useGameStore(s => s.isLoaded)
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set())
+
+  useEffect(() => {
+    if (!isLoaded) return
+    getSolvedPuzzleIds().then(setSolvedIds)
+  }, [isLoaded, getSolvedPuzzleIds])
+
   return (
     <div className="space-y-6 md:ml-16">
       <h2 className="text-xl font-bold text-text-primary">Catalogue de puzzles</h2>
       
       {categories.map(cat => {
         const catPuzzles = allPuzzles.filter(p => p.category === cat.key)
-        const solvedCount = catPuzzles.filter(p => solvedPuzzleIds.has(p.id)).length
+        const solvedCount = catPuzzles.filter(p => solvedIds.has(p.id)).length
         
         return (
           <div key={cat.key} className="glass rounded-2xl p-5">
@@ -32,7 +40,7 @@ export function PuzzlesPage() {
               {(subcategories[cat.key] || []).map(sub => {
                 const subPuzzles = catPuzzles.filter(p => p.subcategory === sub.key)
                 if (subPuzzles.length === 0) return null
-                const subSolved = subPuzzles.filter(p => solvedPuzzleIds.has(p.id)).length
+                const subSolved = subPuzzles.filter(p => solvedIds.has(p.id)).length
                 
                 return (
                   <button

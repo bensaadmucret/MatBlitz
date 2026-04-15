@@ -1,6 +1,6 @@
-import { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { Chessboard } from 'react-chessboard'
-import { Chess } from 'chess.js'
+import { Chess, type Square, type Move } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../../stores/gameStore'
 import { useTimer } from '../../hooks/useTimer'
@@ -17,8 +17,11 @@ export function PuzzleBoard() {
   const [attempts, setAttempts] = useState(0)
   const [boardOrientation, setBoardOrientation] = useState<'white' | 'black'>('white')
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
+  const [selectedSquare, setSelectedSquare] = useState<string | null>(null)
+  const [legalMoveSquares, setLegalMoveSquares] = useState<Set<string>>(new Set())
   const [shakeBoard, setShakeBoard] = useState(false)
   const [showComboAnimation, setShowComboAnimation] = useState(false)
+  const [hintSquare, setHintSquare] = useState<string | null>(null)
   const puzzleRef = useRef(allPuzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
@@ -28,11 +31,88 @@ export function PuzzleBoard() {
   const resetHints = useGameStore(s => s.resetHints)
   const timerMode = useGameStore(s => s.timerMode)
   const totalXp = useGameStore(s => s.totalXp)
+  const setIsPlaying = useGameStore(s => s.setIsPlaying)
   
   const puzzle = allPuzzles[puzzleIndex % allPuzzles.length]
   puzzleRef.current = puzzle
-  const { elapsedMs, timeRemaining, isRunning, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
   
+  // Log puzzle info on first render
+  useEffect(() => {
+    console.log('🧩 Puzzles:', allPuzzles.length, '| Current:', puzzle.id)
+  }, [])
+
+  // Sync isPlaying status with game state
+  useEffect(() => {
+    setIsPlaying(status === 'playing')
+  }, [status, setIsPlaying])
+  const { elapsedMs, timeRemaining, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
+  
+  // Get legal moves from a square
+  const getLegalMoves = useCallback((square: string): Set<string> => {
+    const game = gameRef.current
+    const moves = game.moves({ square: square as Square, verbose: true }) as Move[]
+    return new Set(moves.map(m => m.to))
+  }, [])
+
+  // Is this piece owned by the side to move?
+  // pieceType format from react-chessboard: 'wP', 'bP', 'wQ', 'bK', etc.
+  const isOwnPiece = useCallback((pieceType: string | null): boolean => {
+    if (!pieceType || pieceType.length < 2) return false
+    const currentTurn = gameRef.current.turn()
+    const pieceColor = pieceType[0] // 'w' or 'b'
+    return (currentTurn === 'w' && pieceColor === 'w') || (currentTurn === 'b' && pieceColor === 'b')
+  }, [])
+
+  // Handle square click — handles both piece selection and moves
+  function handleSquareClick({ piece, square }: { piece: { pieceType: string; square?: string } | null; square: string }) {
+    if (status !== 'playing') return
+
+    if (selectedSquare) {
+      // Same square → deselect
+      if (square === selectedSquare) {
+        setSelectedSquare(null)
+        setLegalMoveSquares(new Set())
+        return
+      }
+
+      // Legal move target → execute move (capture or empty square)
+      if (legalMoveSquares.has(square)) {
+        handleMove(selectedSquare as string, square)
+        setSelectedSquare(null)
+        setLegalMoveSquares(new Set())
+        return
+      }
+
+      // Clicked on another piece
+      if (piece?.pieceType) {
+        const isOwn = isOwnPiece(piece.pieceType)
+        if (isOwn) {
+          // Switch to new own piece
+          setSelectedSquare(square)
+          setLegalMoveSquares(getLegalMoves(square))
+        } else {
+          // Clicked opponent piece but not legal → deselect
+          setSelectedSquare(null)
+          setLegalMoveSquares(new Set())
+        }
+        return
+      }
+
+      // Clicked empty square but not legal → deselect
+      setSelectedSquare(null)
+      setLegalMoveSquares(new Set())
+    } else {
+      // No selection yet → try to select own piece
+      if (piece?.pieceType) {
+        const isOwn = isOwnPiece(piece.pieceType)
+        if (isOwn) {
+          setSelectedSquare(square)
+          setLegalMoveSquares(getLegalMoves(square))
+        }
+      }
+    }
+  }
+
   // Initialize puzzle
   const loadPuzzle = useCallback((p: Puzzle) => {
     try {
@@ -43,21 +123,39 @@ export function PuzzleBoard() {
       setStatus('playing')
       setAttempts(0)
       setLastMove(null)
+      setSelectedSquare(null)
+      setLegalMoveSquares(new Set())
+      setHintSquare(null)
       setBoardOrientation(p.sideToMove === 'white' ? 'white' : 'black')
       resetHints()
       resetTimer()
       setTimeout(() => start(), 300)
+
+      // Check if player is already checkmated at puzzle start
+      if (newGame.isCheckmate()) {
+        setStatus('failed')
+        stop()
+        addResult({
+          puzzleId: p.id,
+          solved: false,
+          timeMs: 0,
+          hintsUsed: 0,
+          attempts: 1,
+          timestamp: Date.now(),
+          comboBefore: currentCombo,
+        })
+      }
     } catch (e) {
       console.error('Invalid FEN:', p.fen, e)
     }
-  }, [resetTimer, resetHints, start])
+  }, [resetTimer, resetHints, start, stop, addResult, currentCombo])
   
   useEffect(() => {
     loadPuzzle(puzzle)
   }, [puzzleIndex]) // eslint-disable-line
   
-  // Handle player move
-  function onDrop({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string }): boolean {
+  // Handle player move (internal)
+  function handleMove(sourceSquare: string, targetSquare: string): boolean {
     if (status !== 'playing') return false
     
     const game = gameRef.current
@@ -86,6 +184,7 @@ export function PuzzleBoard() {
       gameRef.current = gameCopy
       setFen(gameCopy.fen())
       setLastMove({ from: sourceSquare, to: targetSquare })
+      setHintSquare(null)
       
       const newMoveIndex = moveIndex + 1
       setMoveIndex(newMoveIndex)
@@ -131,6 +230,21 @@ export function PuzzleBoard() {
               setFen(responseGame.fen())
               setLastMove({ from: responseResult.from, to: responseResult.to })
               setMoveIndex(newMoveIndex + 1)
+
+              // Check if player is checkmated after opponent's response
+              if (responseGame.isCheckmate()) {
+                setStatus('failed')
+                stop()
+                addResult({
+                  puzzleId: currentPuzzle.id,
+                  solved: false,
+                  timeMs: elapsedMs,
+                  hintsUsed,
+                  attempts: attempts + 1,
+                  timestamp: Date.now(),
+                  comboBefore: currentCombo,
+                })
+              }
             }
           } catch (e) {
             console.error('Response move error:', e)
@@ -144,7 +258,23 @@ export function PuzzleBoard() {
       setShakeBoard(true)
       setTimeout(() => setShakeBoard(false), 400)
       setAttempts(prev => prev + 1)
-      
+
+      // Check if player is checkmated after wrong move
+      if (gameCopy.isCheckmate()) {
+        setStatus('failed')
+        stop()
+        addResult({
+          puzzleId: currentPuzzle.id,
+          solved: false,
+          timeMs: elapsedMs,
+          hintsUsed,
+          attempts: attempts + 1,
+          timestamp: Date.now(),
+          comboBefore: currentCombo,
+        })
+        return false
+      }
+
       if (timerMode === 'blitz') {
         setStatus('failed')
         stop()
@@ -158,7 +288,7 @@ export function PuzzleBoard() {
           comboBefore: currentCombo,
         })
       }
-      
+
       return false
     }
   }
@@ -170,16 +300,18 @@ export function PuzzleBoard() {
   const resetPuzzle = () => {
     loadPuzzle(puzzle)
   }
-  
-  const timerProgress = timeRemaining !== null
-    ? Math.max(0, (timeRemaining / (timerMode === 'blitz' ? [15000, 30000, 60000, 90000][puzzle.difficulty - 1] : 60000)) * 100)
-    : 100
-  
-  const timerColor = timerProgress > 50 ? 'bg-accent-primary' : timerProgress > 25 ? 'bg-warning' : 'bg-danger'
-  
+
+  // Wrapper for react-chessboard onPieceDrop
+  function onPieceDrop({ sourceSquare, targetSquare }: { piece?: unknown; sourceSquare: string; targetSquare: string | null }): boolean {
+    if (!targetSquare) return false
+    return handleMove(sourceSquare, targetSquare)
+  }
+
   const chessboardOptions = {
     position: fen,
-    onPieceDrop: onDrop,
+    onPieceDrop,
+    onSquareClick: handleSquareClick as ({ piece, square }: { piece: { pieceType: string } | null; square: string }) => void,
+    allowDragging: true,
     boardOrientation,
     customBoardStyle: {
       borderRadius: '8px',
@@ -187,10 +319,29 @@ export function PuzzleBoard() {
     },
     customDarkSquareStyle: { backgroundColor: '#2a2a4a' },
     customLightSquareStyle: { backgroundColor: '#3a3a5a' },
-    customSquareStyles: lastMove ? {
-      [lastMove.from]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
-      [lastMove.to]: { backgroundColor: 'rgba(124, 58, 237, 0.3)' },
-    } : undefined,
+    customSquareStyles: {
+      ...(lastMove ? {
+        [lastMove.from]: { backgroundColor: 'rgba(168, 85, 247, 0.5)' },
+        [lastMove.to]: { backgroundColor: 'rgba(168, 85, 247, 0.5)' },
+      } : {}),
+      ...(selectedSquare ? {
+        [selectedSquare]: { backgroundColor: 'rgba(147, 51, 234, 0.7)', boxShadow: 'inset 0 0 15px rgba(192, 132, 252, 0.9)' } as React.CSSProperties,
+      } : {}),
+      ...(hintSquare ? {
+        [hintSquare]: { backgroundColor: 'rgba(250, 204, 21, 0.6)', boxShadow: 'inset 0 0 20px rgba(250, 204, 21, 0.9)' } as React.CSSProperties,
+      } : {}),
+      ...Object.fromEntries(
+        [...legalMoveSquares].map(sq => {
+          const hasPiece = gameRef.current.get(sq as Square) !== null
+          return [sq, {
+            background: hasPiece
+              ? 'radial-gradient(circle, rgba(239, 68, 68, 0.6) 30%, rgba(239, 68, 68, 0.3) 70%)'
+              : 'radial-gradient(circle, rgba(168, 85, 247, 0.9) 20%, transparent 25%)',
+            ...(hasPiece ? { borderRadius: '50%', boxShadow: 'inset 0 0 12px rgba(239, 68, 68, 0.8)' } : {}),
+          }]
+        })
+      ),
+    },
     areArrowsAllowed: true,
   }
   
@@ -203,30 +354,10 @@ export function PuzzleBoard() {
             {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : 'Mat en 4'}
           </span>
           <span className="text-text-muted text-sm">
-            {puzzle.sideToMove === 'white' ? '⬜ Blancs jouent' : '⬛ Noirs jouent'}
+            {puzzle.sideToMove === 'white' ? '♔ Blancs jouent' : '♚ Noirs jouent'}
           </span>
         </div>
         <span className="text-text-muted text-xs">#{puzzle.exerciseNumber}</span>
-      </div>
-      
-      {/* Timer */}
-      <div className="w-full">
-        <div className="flex items-center justify-between mb-1.5">
-          <span className="text-xs text-text-muted">
-            {timerMode === 'free' ? '⏱️ Libre' : timerMode === 'blitz' ? '⚡ Blitz' : '💀 Survie'}
-          </span>
-          <span className="text-sm font-mono text-text-secondary">
-            {timeRemaining !== null ? formatTime(timeRemaining) : formatTime(elapsedMs)}
-          </span>
-        </div>
-        <div className="w-full h-1.5 bg-bg-elevated rounded-full overflow-hidden">
-          <motion.div
-            className={`h-full rounded-full ${timerColor}`}
-            initial={false}
-            animate={{ width: `${timerProgress}%` }}
-            transition={{ duration: 0.1 }}
-          />
-        </div>
       </div>
       
       {/* Combo indicator */}
@@ -325,6 +456,17 @@ export function PuzzleBoard() {
               Réessayer
             </button>
             <button
+              onClick={() => {
+                // Replay with XP penalty
+                useGameStore.getState().addXp(-50)
+                resetPuzzle()
+              }}
+              className="flex-1 py-3 rounded-xl bg-amber-600/80 hover:bg-amber-600 text-white font-semibold transition-colors"
+              title="Rejouer le puzzle (-50 XP)"
+            >
+              Rejouer ↺
+            </button>
+            <button
               onClick={nextPuzzle}
               className="flex-1 py-3 rounded-xl bg-bg-elevated hover:bg-bg-card text-text-secondary font-semibold transition-colors"
             >
@@ -334,7 +476,23 @@ export function PuzzleBoard() {
         ) : (
           <>
             <button
-              onClick={() => { incrementHints(); }}
+              onClick={() => {
+                incrementHints()
+                // Show hint: highlight the piece that should move
+                const currentPuzzle = puzzleRef.current
+                const expectedMove = currentPuzzle.solution[moveIndex]
+                if (expectedMove) {
+                  // Extract source square from the move (e.g., 'Qg7+' -> 'g6' if Queen is on g6)
+                  const game = gameRef.current
+                  const moves = game.moves({ verbose: true })
+                  const correctMove = moves.find((m: any) => m.san === expectedMove)
+                  if (correctMove) {
+                    setHintSquare(correctMove.from)
+                    // Clear hint after 2 seconds
+                    setTimeout(() => setHintSquare(null), 2000)
+                  }
+                }
+              }}
               className="py-3 px-4 rounded-xl glass glass-hover text-text-secondary text-sm transition-colors"
               title="Indice (réduit l'XP)"
             >

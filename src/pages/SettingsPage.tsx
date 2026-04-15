@@ -1,9 +1,25 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../stores/gameStore'
 import { queries } from '../db'
 
 export function SettingsPage() {
   const timerMode = useGameStore(s => s.timerMode)
   const setTimerMode = useGameStore(s => s.setTimerMode)
+  const [dbInfo, setDbInfo] = useState({ solved: 0, total: 0 })
+
+  useEffect(() => {
+    ;(async () => {
+      try {
+        const [solved, allResults] = await Promise.all([
+          queries.getTotalSolved(),
+          queries.getAllResults(),
+        ])
+        setDbInfo({ solved, total: allResults.length })
+      } catch (e) {
+        console.error('Failed to load DB info:', e)
+      }
+    })()
+  }, [])
   
   return (
     <div className="space-y-6 md:ml-16 max-w-md">
@@ -36,11 +52,11 @@ export function SettingsPage() {
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-2">💾 Stockage</h3>
         <p className="text-sm text-text-muted">
-          Données persistées via SQLite (sql.js) dans IndexedDB.
+          Données persistées via SQLite natif (Tauri).
           Toute ta progression est sauvegardée automatiquement.
         </p>
         <div className="mt-3 text-xs text-text-muted">
-          {queries.getTotalSolved()} puzzles résolus • {queries.getAllResults().length} résultats enregistrés
+          {dbInfo.solved} puzzles résolus • {dbInfo.total} résultats enregistrés
         </div>
       </div>
       
@@ -57,9 +73,9 @@ export function SettingsPage() {
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-2 text-danger">Zone danger</h3>
         <button
-          onClick={() => {
+          onClick={async () => {
             if (confirm('Tu es sûr ? Toute ta progression sera perdue.')) {
-              queries.resetAllData()
+              await queries.resetAllData()
               window.location.reload()
             }
           }}

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { useGameStore } from '../stores/gameStore'
 import { categories } from '../data/index'
 import { formatTimeShort } from '../utils/format'
@@ -8,14 +9,30 @@ export function HomePage() {
   const getSuccessRate = useGameStore(s => s.getSuccessRate)
   const getStreak = useGameStore(s => s.getStreak)
   const getLevelInfo = useGameStore(s => s.getLevelInfo)
-  const totalXp = useGameStore(s => s.totalXp)
   const bestCombo = useGameStore(s => s.bestCombo)
   const isLoaded = useGameStore(s => s.isLoaded)
   
-  const totalSolved = isLoaded ? getTotalSolved() : 0
-  const avgTime = isLoaded ? getAverageTime() : 0
-  const successRate = isLoaded ? getSuccessRate() : 0
-  const streak = isLoaded ? getStreak() : { current: 0, longest: 0, lastDate: '' }
+  const [stats, setStats] = useState({
+    totalSolved: 0,
+    avgTime: 0,
+    successRate: 0,
+    streak: { current: 0, longest: 0, lastDate: '' } as { current: number; longest: number; lastDate: string },
+  })
+
+  useEffect(() => {
+    if (!isLoaded) return
+    ;(async () => {
+      const [totalSolved, avgTime, successRate, streak] = await Promise.all([
+        getTotalSolved(),
+        getAverageTime(),
+        getSuccessRate(),
+        getStreak(),
+      ])
+      setStats({ totalSolved, avgTime, successRate, streak })
+    })()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isLoaded])
+
   const levelInfo = isLoaded ? getLevelInfo() : { emoji: '♟️', title: 'Pion', levelInTier: 1, progress: 0, xpInCurrentLevel: 0, xpForNextLevel: 100 }
   
   return (
@@ -47,9 +64,9 @@ export function HomePage() {
       
       {/* Stats grid */}
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
-        <StatCard icon="🎯" label="Résolus" value={totalSolved.toString()} />
-        <StatCard icon="⏱️" label="Temps moy." value={avgTime > 0 ? formatTimeShort(avgTime) : '—'} />
-        <StatCard icon="✅" label="Réussite" value={successRate > 0 ? `${successRate}%` : '—'} />
+        <StatCard icon="🎯" label="Résolus" value={stats.totalSolved.toString()} />
+        <StatCard icon="⏱️" label="Temps moy." value={stats.avgTime > 0 ? formatTimeShort(stats.avgTime) : '—'} />
+        <StatCard icon="✅" label="Réussite" value={stats.successRate > 0 ? `${stats.successRate}%` : '—'} />
         <StatCard icon="🔥" label="Meilleur combo" value={bestCombo.toString()} />
       </div>
       
@@ -59,12 +76,12 @@ export function HomePage() {
           <h3 className="font-semibold text-text-primary">Streak quotidienne</h3>
           <div className="flex items-center gap-1">
             <span className="text-xl">🔥</span>
-            <span className="text-2xl font-bold text-orange-400">{streak.current}</span>
+            <span className="text-2xl font-bold text-orange-400">{stats.streak.current}</span>
           </div>
         </div>
         <p className="text-xs text-text-muted">
-          {streak.current > 0
-            ? `${streak.current} jour${streak.current > 1 ? 's' : ''} consécutif${streak.current > 1 ? 's' : ''} — Record : ${streak.longest} jours`
+          {stats.streak.current > 0
+            ? `${stats.streak.current} jour${stats.streak.current > 1 ? 's' : ''} consécutif${stats.streak.current > 1 ? 's' : ''} — Record : ${stats.streak.longest} jours`
             : 'Résous un puzzle aujourd\'hui pour démarrer ta streak !'
           }
         </p>

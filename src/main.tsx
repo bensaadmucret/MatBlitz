@@ -7,7 +7,7 @@ import { initDB } from './db'
 import { useGameStore } from './stores/gameStore'
 import './index.css'
 
-function App() {
+export function App() {
   const [ready, setReady] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const loadFromDB = useGameStore(s => s.loadFromDB)

@@ -1,8 +1,7 @@
 import type { Puzzle, PuzzleCategory } from '../types'
-import manualPuzzles from './puzzles.json'
 import lichessPuzzles from './lichess-puzzles.json'
 
-export const allPuzzles: Puzzle[] = [...(manualPuzzles as Puzzle[]), ...(lichessPuzzles as unknown as Puzzle[])]
+export const allPuzzles: Puzzle[] = lichessPuzzles as unknown as Puzzle[]
 
 export const categories: { key: PuzzleCategory; label: string; count: number }[] = [
   { key: 'mat-en-1', label: 'Mat en 1 coup', count: allPuzzles.filter(p => p.category === 'mat-en-1').length },

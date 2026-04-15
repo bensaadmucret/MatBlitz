@@ -1,10 +1,8 @@
 import { useCallback, useRef, useState } from 'react'
-import { useGameStore } from '../stores/gameStore'
 import type { TimerMode } from '../types'
 
 const BLITZ_TIME: Record<number, number> = { 1: 15, 2: 30, 3: 60, 4: 90 }
 const SURVIVAL_BASE = 60
-const SURVIVAL_BONUS: Record<number, number> = { 1: 5, 2: 8, 3: 12, 4: 15 }
 
 export function useTimer(mode: TimerMode, difficulty: number = 1) {
   const [elapsedMs, setElapsedMs] = useState(0)

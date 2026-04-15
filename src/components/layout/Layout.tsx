@@ -1,6 +1,7 @@
 import { NavLink, Outlet } from 'react-router-dom'
 import { useGameStore } from '../../stores/gameStore'
 import { motion } from 'framer-motion'
+import { BadgeToast } from '../ui/BadgeToast'
 
 const navItems = [
   { to: '/', label: 'Accueil', icon: '🏠' },
@@ -12,20 +13,10 @@ const navItems = [
 
 export function Layout() {
   const getLevelInfo = useGameStore(s => s.getLevelInfo)
-  const getStreak = useGameStore(s => s.getStreak)
   const isLoaded = useGameStore(s => s.isLoaded)
   
-  let levelInfo = { emoji: '♟️', title: 'Pion', levelInTier: 1, progress: 0, xpInCurrentLevel: 0, xpForNextLevel: 100 }
-  let streak = { current: 0, longest: 0, lastDate: '' }
-  
-  try {
-    if (isLoaded) {
-      levelInfo = getLevelInfo()
-      streak = getStreak()
-    }
-  } catch {
-    // DB not ready yet, use defaults
-  }
+  const levelInfo = isLoaded ? getLevelInfo() : { emoji: '♟️', title: 'Pion', levelInTier: 1, progress: 0, xpInCurrentLevel: 0, xpForNextLevel: 100 }
+  // Streak removed from header — now only shown on HomePage
   
   return (
     <div className="min-h-screen flex flex-col bg-bg-primary">
@@ -43,14 +34,6 @@ export function Layout() {
               <span className="text-sm">{levelInfo.emoji}</span>
               <span className="text-xs font-medium text-text-secondary">{levelInfo.title} {levelInfo.levelInTier}</span>
             </div>
-            
-            {/* Streak */}
-            {streak.current > 0 && (
-              <div className="flex items-center gap-1 glass rounded-full px-3 py-1">
-                <span className="text-sm">🔥</span>
-                <span className="text-xs font-bold text-orange-400">{streak.current}</span>
-              </div>
-            )}
           </div>
         </div>
       </header>
@@ -109,6 +92,9 @@ export function Layout() {
           ))}
         </div>
       </nav>
+
+      {/* Badge unlock notifications */}
+      <BadgeToast />
     </div>
   )
 }
