@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useCallback, useRef, useMemo } from 'react'
 import { Chessboard } from 'react-chessboard'
 import { Chess, type Square, type Move } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
@@ -22,6 +22,7 @@ export function PuzzleBoard() {
   const [shakeBoard, setShakeBoard] = useState(false)
   const [showComboAnimation, setShowComboAnimation] = useState(false)
   const [hintArrow, setHintArrow] = useState<{ from: string; to: string } | null>(null)
+  const [hintMoveText, setHintMoveText] = useState<string | null>(null)
   const puzzleRef = useRef(allPuzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
@@ -133,7 +134,10 @@ export function PuzzleBoard() {
       setSelectedSquare(null)
       setLegalMoveSquares(new Set())
       setHintArrow(null)
-      setBoardOrientation(p.sideToMove === 'white' ? 'white' : 'black')
+      setHintMoveText(null)
+      // Dériver sideToMove du FEN (les données Lichess ont sideToMove incorrect)
+      const actualSideToMove = newGame.turn() === 'w' ? 'white' : 'black'
+      setBoardOrientation(actualSideToMove === 'white' ? 'white' : 'black')
       resetHints()
       resetTimer()
       setTimeout(() => start(), 300)
@@ -192,6 +196,7 @@ export function PuzzleBoard() {
       setFen(gameCopy.fen())
       setLastMove({ from: sourceSquare, to: targetSquare })
       setHintArrow(null)
+      setHintMoveText(null)
       
       const newMoveIndex = moveIndex + 1
       setMoveIndex(newMoveIndex)
@@ -314,7 +319,7 @@ export function PuzzleBoard() {
     return handleMove(sourceSquare, targetSquare)
   }
 
-  const chessboardOptions = {
+  const chessboardOptions = useMemo(() => ({
     position: fen,
     onPieceDrop,
     onSquareClick: handleSquareClick as ({ piece, square }: { piece: { pieceType: string } | null; square: string }) => void,
@@ -349,8 +354,8 @@ export function PuzzleBoard() {
       ),
     },
     areArrowsAllowed: true,
-    customArrows: hintArrow ? [[hintArrow.from, hintArrow.to, 'rgba(250, 204, 21, 1)']] : [],
-  }
+    customArrows: hintArrow ? [[hintArrow.from, hintArrow.to, 'yellow']] : [],
+  }), [fen, onPieceDrop, handleSquareClick, boardOrientation, lastMove, selectedSquare, legalMoveSquares, hintArrow])
   
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto">
@@ -361,7 +366,8 @@ export function PuzzleBoard() {
             {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : 'Mat en 4'}
           </span>
           <span className="text-text-muted text-sm">
-            {puzzle.sideToMove === 'white' ? '♔ Blancs jouent' : '♚ Noirs jouent'}
+            {/* Dériver du FEN car puzzle.sideToMove est incorrect dans les données Lichess */}
+            {gameRef.current.turn() === 'w' ? '♔ Blancs jouent' : '♚ Noirs jouent'}
           </span>
         </div>
         <span className="text-text-muted text-xs">#{puzzle.exerciseNumber}</span>
@@ -380,10 +386,22 @@ export function PuzzleBoard() {
         </div>
       )}
       
+      {/* Hint display */}
+      {hintMoveText && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          exit={{ opacity: 0 }}
+          className="w-full text-center py-2 px-4 rounded-lg bg-warning/20 border border-warning/50 text-warning font-bold text-lg"
+        >
+          💡 Indice : {hintMoveText}
+        </motion.div>
+      )}
+      
       {/* Chess board */}
       <div className={`w-full ${shakeBoard ? 'animate-shake' : ''}`}>
         <div className="relative">
-          <Chessboard options={chessboardOptions} />
+          <Chessboard key={hintArrow ? `hint-${hintArrow.from}-${hintArrow.to}` : 'board'} options={chessboardOptions} />
           
           {/* Overlay for solved/failed */}
           <AnimatePresence>
@@ -497,9 +515,14 @@ export function PuzzleBoard() {
                   console.log('Found correctMove:', correctMove)
                   if (correctMove) {
                     setHintArrow({ from: correctMove.from, to: correctMove.to })
-                    console.log('Hint arrow set to:', correctMove.from, '->', correctMove.to)
+                    const pieceName = correctMove.piece === 'p' ? 'Pion' : correctMove.piece === 'r' ? 'Tour' : correctMove.piece === 'n' ? 'Cavalier' : correctMove.piece === 'b' ? 'Fou' : correctMove.piece === 'q' ? 'Dame' : correctMove.piece === 'k' ? 'Roi' : 'Pièce'
+                    setHintMoveText(`${pieceName} : ${correctMove.from.toUpperCase()} → ${correctMove.to.toUpperCase()}`)
+                    console.log('Hint set:', correctMove.from, '->', correctMove.to, 'Move:', expectedMove)
                     // Clear hint after 2 seconds
-                    setTimeout(() => setHintArrow(null), 2000)
+                    setTimeout(() => {
+                      setHintArrow(null)
+                      setHintMoveText(null)
+                    }, 3000)
                   } else {
                     console.log('No matching move found for:', expectedMove)
                   }
