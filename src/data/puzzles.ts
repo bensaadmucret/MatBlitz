@@ -1,7 +1,8 @@
 import type { Puzzle, PuzzleCategory } from '../types'
 
+// All puzzles VERIFIED with chess.js ✅
 export const puzzles: Puzzle[] = [
-  // Mat en 1 — Dame
+  // === MAT EN 1 — DAME ===
   {
     id: 'mat1-001',
     fen: '6k1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1',
@@ -35,7 +36,7 @@ export const puzzles: Puzzle[] = [
     source: 'livre-1',
     exerciseNumber: 57,
   },
-  // Mat en 1 — Tour
+  // === MAT EN 1 — TOUR ===
   {
     id: 'mat1-004',
     fen: '6k1/5ppp/8/8/8/8/5PPP/R5K1 w - - 0 1',
@@ -58,35 +59,23 @@ export const puzzles: Puzzle[] = [
     source: 'livre-1',
     exerciseNumber: 23,
   },
-  // Mat en 1 — Cavalier
+  // === MAT EN 1 — CAVALIER ===
   {
     id: 'mat1-006',
-    fen: '6k1/5ppp/8/8/8/5N2/5PPP/6K1 w - - 0 1',
-    solution: ['Nh4#'],
+    fen: '6rk/6pp/8/6N1/8/8/8/6K1 w - - 0 1',
+    solution: ['Nf7#'],
     category: 'mat-en-1',
     subcategory: 'cavalier',
     difficulty: 1,
     sideToMove: 'white',
     source: 'livre-1',
-    exerciseNumber: 32,
+    exerciseNumber: 29,
   },
-  // Mat en 1 — Fou
+  // === MAT EN 1 — PION ===
   {
     id: 'mat1-007',
-    fen: '6k1/5ppp/8/8/8/5B2/5PPP/6K1 w - - 0 1',
-    solution: ['Bh5#'],
-    category: 'mat-en-1',
-    subcategory: 'fou',
-    difficulty: 1,
-    sideToMove: 'white',
-    source: 'livre-1',
-    exerciseNumber: 44,
-  },
-  // Mat en 1 — Pion
-  {
-    id: 'mat1-008',
-    fen: '6k1/6Pp/8/8/8/8/6PP/6K1 w - - 0 1',
-    solution: ['g8=Q#'],
+    fen: 'k7/2P5/1K6/8/8/8/8/8 w - - 0 1',
+    solution: ['c8=Q#'],
     category: 'mat-en-1',
     subcategory: 'pion',
     difficulty: 1,
@@ -94,51 +83,16 @@ export const puzzles: Puzzle[] = [
     source: 'livre-1',
     exerciseNumber: 1,
   },
-  // Mat en 2
+  // === MAT EN 2 ===
   {
     id: 'mat2-001',
-    fen: '5rk1/5ppp/8/8/8/8/5PPP/3Q2K1 w - - 0 1',
-    solution: ['Qd8', 'Rxd8', 'Rxd8#'],
-    category: 'mat-en-2',
-    subcategory: 'roi-et-dame',
-    difficulty: 2,
-    sideToMove: 'white',
-    source: 'livre-2',
-    exerciseNumber: 1,
-  },
-  {
-    id: 'mat2-002',
-    fen: 'r1bqk2r/pppp1ppp/2n2n2/2b1p3/2B1P3/5Q2/PPPP1PPP/RNB1K1NR w KQkq - 4 4',
-    solution: ['Qxf7#'],
+    fen: '6rk/7p/7Q/4B3/8/8/8/5R1K w - - 0 1',
+    solution: ['Qg7+', 'Rxg7', 'Rf8#'],
     category: 'mat-en-2',
     subcategory: 'dame',
     difficulty: 2,
     sideToMove: 'white',
     source: 'livre-2',
-    exerciseNumber: 55,
-  },
-  // Mat en 3
-  {
-    id: 'mat3-001',
-    fen: 'r2qk2r/ppp2ppp/2n1bn2/3pp3/2B1P1b1/2NP1N2/PPP2PPP/R1BQ1RK1 w kq - 0 8',
-    solution: ['Nxe5', 'Nxe5', 'd4', 'Nd3', 'Bxf7#'],
-    category: 'mat-en-3',
-    subcategory: 'divers',
-    difficulty: 3,
-    sideToMove: 'white',
-    source: 'livre-1',
-    exerciseNumber: 1,
-  },
-  // Mat en 4
-  {
-    id: 'mat4-001',
-    fen: 'r1b1kb1r/pppp1ppp/2n2n2/4p3/2B1P3/5N2/PPPP1PPP/RNBQK2R w KQkq - 4 4',
-    solution: ['Nxe5', 'Nxe5', 'd4', 'Ng6', 'Qd5'],
-    category: 'mat-en-4',
-    subcategory: 'divers',
-    difficulty: 4,
-    sideToMove: 'white',
-    source: 'livre-1',
     exerciseNumber: 1,
   },
 ]
@@ -163,23 +117,7 @@ export const subcategories: Record<PuzzleCategory, { key: string; label: string 
     { key: 'roi-et-dame', label: 'Roi et Dame' },
     { key: 'roi-et-fou', label: 'Roi et Fou' },
     { key: 'roi-et-tour', label: 'Roi et Tour' },
-    { key: 'roi-et-cavalier', label: 'Roi et Cavalier' },
-    { key: 'roi-et-pion', label: 'Roi et Pion' },
     { key: 'dame', label: 'Dame' },
-    { key: 'dame-et-tour', label: 'Dame et Tour' },
-    { key: 'dame-et-fou', label: 'Dame et Fou' },
-    { key: 'dame-et-cavalier', label: 'Dame et Cavalier' },
-    { key: 'dame-et-pion', label: 'Dame et Pion' },
-    { key: 'tour', label: 'Tour' },
-    { key: 'tour-et-fou', label: 'Tour et Fou' },
-    { key: 'tour-et-cavalier', label: 'Tour et Cavalier' },
-    { key: 'tour-et-pion', label: 'Tour et Pion' },
-    { key: 'fou', label: 'Fou' },
-    { key: 'fou-et-cavalier', label: 'Fou et Cavalier' },
-    { key: 'fou-et-pion', label: 'Fou et Pion' },
-    { key: 'cavalier', label: 'Cavalier' },
-    { key: 'cavalier-et-pion', label: 'Cavalier et Pion' },
-    { key: 'pion', label: 'Pion' },
     { key: 'divers', label: 'Divers' },
   ],
   'mat-en-3': [
