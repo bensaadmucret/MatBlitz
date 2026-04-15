@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from 'react'
 import type { TimerMode } from '../types'
 
-const BLITZ_TIME: Record<number, number> = { 1: 15, 2: 30, 3: 60, 4: 90 }
+const BLITZ_TIME: Record<number, number> = { 1: 15, 2: 30, 3: 60, 4: 90, 5: 120 }
 const SURVIVAL_BASE = 60
 
 export function useTimer(mode: TimerMode, difficulty: number = 1) {

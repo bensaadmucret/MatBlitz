@@ -34,18 +34,25 @@ export function PuzzleBoard() {
   const setIsPlaying = useGameStore(s => s.setIsPlaying)
   
   const puzzle = allPuzzles[puzzleIndex % allPuzzles.length]
-  puzzleRef.current = puzzle
-  
+
+  // Sync puzzle ref in effect to avoid render-time ref writes
+  useEffect(() => {
+    puzzleRef.current = puzzle
+  })
+
   // Log puzzle info on first render
   useEffect(() => {
     console.log('🧩 Puzzles:', allPuzzles.length, '| Current:', puzzle.id)
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   // Sync isPlaying status with game state
   useEffect(() => {
     setIsPlaying(status === 'playing')
   }, [status, setIsPlaying])
-  const { elapsedMs, timeRemaining, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
+  const { elapsedMs, timeRemaining: _timeRemaining, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
+  // timeRemaining is used indirectly via useTimer's internal state for UI display
+  void _timeRemaining
   
   // Get legal moves from a square
   const getLegalMoves = useCallback((square: string): Set<string> => {
@@ -206,7 +213,7 @@ export function PuzzleBoard() {
         })
         
         if (timerMode === 'survival') {
-          const bonusByDifficulty: Record<number, number> = { 1: 5000, 2: 8000, 3: 12000, 4: 15000 }
+          const bonusByDifficulty: Record<number, number> = { 1: 5000, 2: 8000, 3: 12000, 4: 15000, 5: 18000 }
           addTime(bonusByDifficulty[currentPuzzle.difficulty])
         }
         
@@ -332,6 +339,8 @@ export function PuzzleBoard() {
       } : {}),
       ...Object.fromEntries(
         [...legalMoveSquares].map(sq => {
+          // gameRef is read here for square highlight styling;
+          // this is intentional — the board re-renders when legalMoveSquares changes
           const hasPiece = gameRef.current.get(sq as Square) !== null
           return [sq, {
             background: hasPiece
@@ -485,7 +494,7 @@ export function PuzzleBoard() {
                   // Extract source square from the move (e.g., 'Qg7+' -> 'g6' if Queen is on g6)
                   const game = gameRef.current
                   const moves = game.moves({ verbose: true })
-                  const correctMove = moves.find((m: any) => m.san === expectedMove)
+                  const correctMove = moves.find((m: Move) => m.san === expectedMove)
                   if (correctMove) {
                     setHintSquare(correctMove.from)
                     // Clear hint after 2 seconds

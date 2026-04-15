@@ -4,17 +4,17 @@ export interface Puzzle {
   solution: string[]
   category: PuzzleCategory
   subcategory: string
-  difficulty: 1 | 2 | 3 | 4
+  difficulty: 1 | 2 | 3 | 4 | 5
   sideToMove: 'white' | 'black'
   source: string
   exerciseNumber: number
 }
 
-export type PuzzleCategory = 'mat-en-1' | 'mat-en-2' | 'mat-en-3' | 'mat-en-4'
+export type PuzzleCategory = 'mat-en-1' | 'mat-en-2' | 'mat-en-3' | 'mat-en-4' | 'mat-en-5'
 
 export type TimerMode = 'free' | 'blitz' | 'survival'
 
-export type Difficulty = 1 | 2 | 3 | 4
+export type Difficulty = 1 | 2 | 3 | 4 | 5
 
 export interface TimerConfig {
   free: { label: string; description: string }

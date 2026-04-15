@@ -1,8 +1,9 @@
 import { getDB } from './database'
 import type { PuzzleResult, DailyStreak, Badge } from '../types'
 
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
-interface DbRow extends Record<string, any> {}
+/* eslint-disable @typescript-eslint/no-explicit-any */
+// DbRow represents dynamic SQL query results where column names vary by query
+type DbRow = Record<string, any>
 
 // ===== PUZZLE RESULTS =====
 
