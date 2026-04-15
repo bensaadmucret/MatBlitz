@@ -19,7 +19,7 @@ export function PuzzleBoard() {
   const [lastMove, setLastMove] = useState<{ from: string; to: string } | null>(null)
   const [shakeBoard, setShakeBoard] = useState(false)
   const [showComboAnimation, setShowComboAnimation] = useState(false)
-  const puzzleRef = useRef(puzzles[0])
+  const puzzleRef = useRef(allPuzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
   const currentCombo = useGameStore(s => s.currentCombo)
