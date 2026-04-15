@@ -5,7 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion'
 import { useGameStore } from '../../stores/gameStore'
 import { useTimer } from '../../hooks/useTimer'
 import { formatTime } from '../../utils/format'
-import { puzzles } from '../../data/puzzles'
+import { allPuzzles } from '../../data/index'
 import type { Puzzle } from '../../types'
 
 export function PuzzleBoard() {
@@ -29,7 +29,7 @@ export function PuzzleBoard() {
   const timerMode = useGameStore(s => s.timerMode)
   const totalXp = useGameStore(s => s.totalXp)
   
-  const puzzle = puzzles[puzzleIndex % puzzles.length]
+  const puzzle = allPuzzles[puzzleIndex % allPuzzles.length]
   puzzleRef.current = puzzle
   const { elapsedMs, timeRemaining, isRunning, start, stop, reset: resetTimer, addTime } = useTimer(timerMode, puzzle.difficulty)
   

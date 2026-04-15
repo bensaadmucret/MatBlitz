@@ -1,5 +1,5 @@
 import { useGameStore } from '../stores/gameStore'
-import { categories, subcategories, puzzles } from '../data/puzzles'
+import { categories, subcategories, allPuzzles } from '../data/index'
 
 export function PuzzlesPage() {
   const solvedPuzzleIds = useGameStore(s => s.solvedPuzzleIds)
@@ -9,7 +9,7 @@ export function PuzzlesPage() {
       <h2 className="text-xl font-bold text-text-primary">Catalogue de puzzles</h2>
       
       {categories.map(cat => {
-        const catPuzzles = puzzles.filter(p => p.category === cat.key)
+        const catPuzzles = allPuzzles.filter(p => p.category === cat.key)
         const solvedCount = catPuzzles.filter(p => solvedPuzzleIds.has(p.id)).length
         
         return (

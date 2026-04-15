@@ -1,5 +1,5 @@
 import { useGameStore } from '../stores/gameStore'
-import { categories } from '../data/puzzles'
+import { categories } from '../data/index'
 import { formatTimeShort } from '../utils/format'
 
 export function HomePage() {
