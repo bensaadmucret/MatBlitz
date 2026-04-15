@@ -1,18 +1,29 @@
+import { useEffect, useState } from 'react'
 import { motion } from 'framer-motion'
-import { useGameStore } from '../stores/gameStore'
 import { allBadges } from '../data/badges'
+import { queries } from '../db'
+import type { Badge } from '../types'
 
 export function BadgesPage() {
-  const unlockedBadges = useGameStore(s => s.unlockedBadges)
+  const [unlockedBadges, setUnlockedBadges] = useState<Badge[]>([])
+
+  useEffect(() => {
+    try {
+      setUnlockedBadges(queries.getUnlockedBadges())
+    } catch (e) {
+      console.error('Failed to load badges:', e)
+    }
+  }, [])
+
   const unlockedIds = new Set(unlockedBadges.map(b => b.id))
-  
+
   return (
     <div className="space-y-6 md:ml-16">
       <div className="flex items-center justify-between">
         <h2 className="text-xl font-bold text-text-primary">Badges</h2>
         <span className="text-sm text-text-muted">{unlockedBadges.length}/{allBadges.length}</span>
       </div>
-      
+
       <div className="grid grid-cols-2 md:grid-cols-3 gap-4">
         {allBadges.map(badge => {
           const isUnlocked = unlockedIds.has(badge.id)

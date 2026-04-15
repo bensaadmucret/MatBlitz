@@ -1,4 +1,5 @@
 import { useGameStore } from '../stores/gameStore'
+import { queries } from '../db'
 
 export function SettingsPage() {
   const timerMode = useGameStore(s => s.timerMode)
@@ -31,12 +32,24 @@ export function SettingsPage() {
         ))}
       </div>
       
+      {/* Database info */}
+      <div className="glass rounded-2xl p-5">
+        <h3 className="font-semibold mb-2">💾 Stockage</h3>
+        <p className="text-sm text-text-muted">
+          Données persistées via SQLite (sql.js) dans IndexedDB.
+          Toute ta progression est sauvegardée automatiquement.
+        </p>
+        <div className="mt-3 text-xs text-text-muted">
+          {queries.getTotalSolved()} puzzles résolus • {queries.getAllResults().length} résultats enregistrés
+        </div>
+      </div>
+      
       {/* About */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-2">À propos</h3>
         <p className="text-sm text-text-muted">
           MatBlitz ⚡ — Entraînement aux puzzles d'échecs avec gamification.
-          Source : 1000 Exercices et Puzzles d'Échecs + 1000 Exercices Mat en 2 (Vol. 2)
+          Source : 1000 Exercices et Puzzles d'Échecs + 1000 Exercices Mat en 2 (Vol. 2) + Lichess Puzzle Database
         </p>
       </div>
       
@@ -46,7 +59,7 @@ export function SettingsPage() {
         <button
           onClick={() => {
             if (confirm('Tu es sûr ? Toute ta progression sera perdue.')) {
-              localStorage.removeItem('matblitz-game')
+              queries.resetAllData()
               window.location.reload()
             }
           }}

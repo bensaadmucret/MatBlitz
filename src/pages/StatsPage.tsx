@@ -1,88 +1,91 @@
-import { useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import { useGameStore } from '../stores/gameStore'
+import { queries } from '../db'
 import { formatTimeShort, formatTime } from '../utils/format'
 
 export function StatsPage() {
-  const results = useGameStore(s => s.results)
-  const streak = useGameStore(s => s.streak)
   const getLevelInfo = useGameStore(s => s.getLevelInfo)
+  const totalXp = useGameStore(s => s.totalXp)
   const bestCombo = useGameStore(s => s.bestCombo)
-  
+
+  const [stats, setStats] = useState({
+    totalSolved: 0,
+    successRate: 0,
+    avgTime: 0,
+    fastestTime: 0,
+    medianTime: 0,
+    heatmap: [] as { date: string; count: number }[],
+    timeDistribution: [] as { label: string; count: number }[],
+    recentAvg: 0,
+    olderAvg: 0,
+    perfectSolves: 0,
+    totalAttempts: 0,
+    totalHints: 0,
+    streak: { current: 0, longest: 0, lastDate: '' },
+  })
+
+  useEffect(() => {
+    try {
+      const totalSolved = queries.getTotalSolved()
+      const successRate = queries.getSuccessRate()
+      const avgTime = queries.getAverageTime()
+      const fastestTime = queries.getFastestSolve()
+      const streak = queries.getStreak()
+      const heatmap = queries.getHeatmapData(90)
+      const timeDistribution = queries.getTimeDistribution()
+
+      // Get results for median and trend calculations
+      const now = Date.now()
+      const weekAgo = now - 7 * 86400000
+      const twoWeeksAgo = now - 14 * 86400000
+
+      const recentResults = queries.getResultsByDateRange(weekAgo, now)
+      const olderResults = queries.getResultsByDateRange(twoWeeksAgo, weekAgo)
+
+      const recentSolved = recentResults.filter(r => r.solved)
+      const olderSolved = olderResults.filter(r => r.solved)
+      const allSolved = queries.getResultsByDateRange(0, now).filter(r => r.solved)
+
+      const sortedTimes = allSolved.map(r => r.timeMs).sort((a, b) => a - b)
+      const medianTime = sortedTimes.length > 0 ? sortedTimes[Math.floor(sortedTimes.length / 2)] : 0
+
+      const recentAvg = recentSolved.length > 0 ? Math.round(recentSolved.reduce((a, r) => a + r.timeMs, 0) / recentSolved.length) : 0
+      const olderAvg = olderSolved.length > 0 ? Math.round(olderSolved.reduce((a, r) => a + r.timeMs, 0) / olderSolved.length) : 0
+
+      const perfectSolves = allSolved.filter(r => r.attempts === 1 && r.hintsUsed === 0).length
+      const totalAttempts = queries.getResultsByDateRange(0, now).length
+      const totalHints = queries.getResultsByDateRange(0, now).reduce((a, r) => a + r.hintsUsed, 0)
+
+      setStats({
+        totalSolved, successRate, avgTime, fastestTime, medianTime,
+        heatmap, timeDistribution, recentAvg, olderAvg,
+        perfectSolves, totalAttempts, totalHints, streak,
+      })
+    } catch (e) {
+      console.error('Failed to load stats:', e)
+    }
+  }, [])
+
   const levelInfo = getLevelInfo()
-  
-  const stats = useMemo(() => {
-    const solved = results.filter(r => r.solved)
-    const failed = results.filter(r => !r.solved)
-    
-    // Heatmap data (last 90 days)
+
+  // Build full 90-day heatmap with zeros
+  const fullHeatmap = useMemo(() => {
     const now = new Date()
-    const heatmap: { date: string; count: number }[] = []
+    const result: { date: string; count: number }[] = []
+    const heatmapMap = new Map(stats.heatmap.map(h => [h.date, h.count]))
     for (let i = 89; i >= 0; i--) {
       const d = new Date(now)
       d.setDate(d.getDate() - i)
       const dateStr = d.toISOString().split('T')[0]
-      const count = solved.filter(r => new Date(r.timestamp).toISOString().split('T')[0] === dateStr).length
-      heatmap.push({ date: dateStr, count })
+      result.push({ date: dateStr, count: heatmapMap.get(dateStr) || 0 })
     }
-    
-    // Time distribution
-    const timeBuckets = {
-      '<5s': 0,
-      '5-15s': 0,
-      '15-30s': 0,
-      '30-60s': 0,
-      '>60s': 0,
-    }
-    for (const r of solved) {
-      const s = r.timeMs / 1000
-      if (s < 5) timeBuckets['<5s']++
-      else if (s < 15) timeBuckets['5-15s']++
-      else if (s < 30) timeBuckets['15-30s']++
-      else if (s < 60) timeBuckets['30-60s']++
-      else timeBuckets['>60s']++
-    }
-    
-    // Median time
-    const sortedTimes = solved.map(r => r.timeMs).sort((a, b) => a - b)
-    const medianTime = sortedTimes.length > 0
-      ? sortedTimes[Math.floor(sortedTimes.length / 2)]
-      : 0
-    
-    // Recent trend (last 7 days)
-    const weekAgo = Date.now() - 7 * 86400000
-    const recentSolved = solved.filter(r => r.timestamp > weekAgo)
-    const recentAvg = recentSolved.length > 0
-      ? recentSolved.reduce((a, r) => a + r.timeMs, 0) / recentSolved.length
-      : 0
-    
-    // Older period for comparison
-    const twoWeeksAgo = Date.now() - 14 * 86400000
-    const olderSolved = solved.filter(r => r.timestamp > twoWeeksAgo && r.timestamp <= weekAgo)
-    const olderAvg = olderSolved.length > 0
-      ? olderSolved.reduce((a, r) => a + r.timeMs, 0) / olderSolved.length
-      : 0
-    
-    return {
-      totalSolved: solved.length,
-      totalFailed: failed.length,
-      totalAttempts: results.length,
-      successRate: results.length > 0 ? Math.round((solved.length / results.length) * 100) : 0,
-      avgTime: solved.length > 0 ? Math.round(solved.reduce((a, r) => a + r.timeMs, 0) / solved.length) : 0,
-      medianTime,
-      fastestTime: solved.length > 0 ? Math.min(...solved.map(r => r.timeMs)) : 0,
-      heatmap,
-      timeBuckets,
-      recentAvg,
-      olderAvg,
-      totalHintsUsed: results.reduce((a, r) => a + r.hintsUsed, 0),
-      perfectSolves: solved.filter(r => r.attempts === 1 && r.hintsUsed === 0).length,
-    }
-  }, [results])
-  
+    return result
+  }, [stats.heatmap])
+
   return (
     <div className="space-y-6 md:ml-16">
       <h2 className="text-xl font-bold text-text-primary">Statistiques</h2>
-      
+
       {/* Overview cards */}
       <div className="grid grid-cols-2 md:grid-cols-3 gap-3">
         <StatCard label="Puzzles résolus" value={stats.totalSolved.toString()} />
@@ -92,12 +95,12 @@ export function StatsPage() {
         <StatCard label="Meilleur temps" value={stats.fastestTime > 0 ? formatTime(stats.fastestTime) : '—'} />
         <StatCard label="Parfait (1er coup)" value={stats.perfectSolves.toString()} />
       </div>
-      
+
       {/* Level & XP */}
       <div className="glass rounded-2xl p-5">
         <div className="flex items-center justify-between mb-3">
           <h3 className="font-semibold">{levelInfo.emoji} Niveau {levelInfo.title} {levelInfo.levelInTier}</h3>
-          <span className="text-sm text-accent-secondary">{useGameStore.getState().totalXp} XP</span>
+          <span className="text-sm text-accent-secondary">{totalXp} XP</span>
         </div>
         <div className="w-full h-2 bg-bg-elevated rounded-full overflow-hidden">
           <div
@@ -105,18 +108,21 @@ export function StatsPage() {
             style={{ width: `${levelInfo.progress * 100}%` }}
           />
         </div>
+        <div className="text-xs text-text-muted mt-2">
+          {levelInfo.xpInCurrentLevel}/{levelInfo.xpForNextLevel} XP pour le prochain niveau
+        </div>
       </div>
-      
+
       {/* Streak */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-3">🔥 Streak</h3>
         <div className="flex gap-6">
           <div>
-            <div className="text-3xl font-bold text-orange-400">{streak.current}</div>
+            <div className="text-3xl font-bold text-orange-400">{stats.streak.current}</div>
             <div className="text-xs text-text-muted">Actuelle</div>
           </div>
           <div>
-            <div className="text-3xl font-bold text-text-secondary">{streak.longest}</div>
+            <div className="text-3xl font-bold text-text-secondary">{stats.streak.longest}</div>
             <div className="text-xs text-text-muted">Record</div>
           </div>
           <div>
@@ -125,12 +131,12 @@ export function StatsPage() {
           </div>
         </div>
       </div>
-      
+
       {/* Heatmap */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-4">📅 Activité (90 jours)</h3>
         <div className="flex flex-wrap gap-[3px]">
-          {stats.heatmap.map((day, i) => (
+          {fullHeatmap.map((day, i) => (
             <div
               key={i}
               className="w-[10px] h-[10px] rounded-[2px] transition-colors"
@@ -150,13 +156,13 @@ export function StatsPage() {
           ))}
         </div>
       </div>
-      
+
       {/* Time distribution */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-4">⏱️ Répartition des temps</h3>
         <div className="space-y-2">
-          {Object.entries(stats.timeBuckets).map(([label, count]) => {
-            const max = Math.max(...Object.values(stats.timeBuckets), 1)
+          {stats.timeDistribution.length > 0 ? stats.timeDistribution.map(({ label, count }) => {
+            const max = Math.max(...stats.timeDistribution.map(d => d.count), 1)
             const pct = (count / max) * 100
             return (
               <div key={label} className="flex items-center gap-3">
@@ -170,10 +176,12 @@ export function StatsPage() {
                 <span className="text-xs text-text-secondary w-8">{count}</span>
               </div>
             )
-          })}
+          }) : (
+            <p className="text-sm text-text-muted">Aucune donnée encore</p>
+          )}
         </div>
       </div>
-      
+
       {/* Trend */}
       <div className="glass rounded-2xl p-5">
         <h3 className="font-semibold mb-3">📈 Tendance</h3>
@@ -199,6 +207,21 @@ export function StatsPage() {
             }
           </div>
         )}
+      </div>
+
+      {/* Extra stats */}
+      <div className="glass rounded-2xl p-5">
+        <h3 className="font-semibold mb-3">📋 Détails</h3>
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <div className="text-xs text-text-muted">Tentatives totales</div>
+            <div className="text-lg font-bold">{stats.totalAttempts}</div>
+          </div>
+          <div>
+            <div className="text-xs text-text-muted">Indices utilisés</div>
+            <div className="text-lg font-bold">{stats.totalHints}</div>
+          </div>
+        </div>
       </div>
     </div>
   )
