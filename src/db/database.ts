@@ -7,7 +7,7 @@ export async function initDB(): Promise<Database> {
   if (db) return db
 
   const SQL = await initSqlJs({
-    locateFile: (file: string) => `https://sql.js.org/dist/${file}`,
+    locateFile: (file: string) => `/${file}`,
   })
 
   // Try to load existing DB from IndexedDB

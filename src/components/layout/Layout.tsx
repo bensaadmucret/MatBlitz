@@ -12,8 +12,20 @@ const navItems = [
 
 export function Layout() {
   const getLevelInfo = useGameStore(s => s.getLevelInfo)
-  const streak = useGameStore(s => s.streak)
-  const levelInfo = getLevelInfo()
+  const getStreak = useGameStore(s => s.getStreak)
+  const isLoaded = useGameStore(s => s.isLoaded)
+  
+  let levelInfo = { emoji: '♟️', title: 'Pion', levelInTier: 1, progress: 0, xpInCurrentLevel: 0, xpForNextLevel: 100 }
+  let streak = { current: 0, longest: 0, lastDate: '' }
+  
+  try {
+    if (isLoaded) {
+      levelInfo = getLevelInfo()
+      streak = getStreak()
+    }
+  } catch {
+    // DB not ready yet, use defaults
+  }
   
   return (
     <div className="min-h-screen flex flex-col bg-bg-primary">
@@ -78,7 +90,7 @@ export function Layout() {
         </div>
       </nav>
       
-      {/* Desktop sidebar nav - shown on md+ */}
+      {/* Desktop sidebar nav */}
       <nav className="hidden md:block fixed left-0 top-14 bottom-0 w-16 glass border-r border-border z-40">
         <div className="flex flex-col items-center gap-2 py-4">
           {navItems.map(item => (

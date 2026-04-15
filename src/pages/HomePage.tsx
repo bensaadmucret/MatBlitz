@@ -6,16 +6,17 @@ export function HomePage() {
   const getTotalSolved = useGameStore(s => s.getTotalSolved)
   const getAverageTime = useGameStore(s => s.getAverageTime)
   const getSuccessRate = useGameStore(s => s.getSuccessRate)
-  const streak = useGameStore(s => s.streak)
+  const getStreak = useGameStore(s => s.getStreak)
   const getLevelInfo = useGameStore(s => s.getLevelInfo)
   const totalXp = useGameStore(s => s.totalXp)
-  const currentCombo = useGameStore(s => s.currentCombo)
   const bestCombo = useGameStore(s => s.bestCombo)
+  const isLoaded = useGameStore(s => s.isLoaded)
   
-  const totalSolved = getTotalSolved()
-  const avgTime = getAverageTime()
-  const successRate = getSuccessRate()
-  const levelInfo = getLevelInfo()
+  const totalSolved = isLoaded ? getTotalSolved() : 0
+  const avgTime = isLoaded ? getAverageTime() : 0
+  const successRate = isLoaded ? getSuccessRate() : 0
+  const streak = isLoaded ? getStreak() : { current: 0, longest: 0, lastDate: '' }
+  const levelInfo = isLoaded ? getLevelInfo() : { emoji: '♟️', title: 'Pion', levelInTier: 1, progress: 0, xpInCurrentLevel: 0, xpForNextLevel: 100 }
   
   return (
     <div className="space-y-6 md:ml-16">
