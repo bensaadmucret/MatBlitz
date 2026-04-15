@@ -21,7 +21,7 @@ export function PuzzleBoard() {
   const [legalMoveSquares, setLegalMoveSquares] = useState<Set<string>>(new Set())
   const [shakeBoard, setShakeBoard] = useState(false)
   const [showComboAnimation, setShowComboAnimation] = useState(false)
-  const [hintSquare, setHintSquare] = useState<string | null>(null)
+  const [hintArrow, setHintArrow] = useState<{ from: string; to: string } | null>(null)
   const puzzleRef = useRef(allPuzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
@@ -132,7 +132,7 @@ export function PuzzleBoard() {
       setLastMove(null)
       setSelectedSquare(null)
       setLegalMoveSquares(new Set())
-      setHintSquare(null)
+      setHintArrow(null)
       setBoardOrientation(p.sideToMove === 'white' ? 'white' : 'black')
       resetHints()
       resetTimer()
@@ -191,7 +191,7 @@ export function PuzzleBoard() {
       gameRef.current = gameCopy
       setFen(gameCopy.fen())
       setLastMove({ from: sourceSquare, to: targetSquare })
-      setHintSquare(null)
+      setHintArrow(null)
       
       const newMoveIndex = moveIndex + 1
       setMoveIndex(newMoveIndex)
@@ -334,9 +334,6 @@ export function PuzzleBoard() {
       ...(selectedSquare ? {
         [selectedSquare]: { backgroundColor: 'rgba(147, 51, 234, 0.7)', boxShadow: 'inset 0 0 15px rgba(192, 132, 252, 0.9)' } as React.CSSProperties,
       } : {}),
-      ...(hintSquare ? {
-        [hintSquare]: { backgroundColor: 'rgba(250, 204, 21, 0.6)', boxShadow: 'inset 0 0 20px rgba(250, 204, 21, 0.9)' } as React.CSSProperties,
-      } : {}),
       ...Object.fromEntries(
         [...legalMoveSquares].map(sq => {
           // gameRef is read here for square highlight styling;
@@ -352,6 +349,7 @@ export function PuzzleBoard() {
       ),
     },
     areArrowsAllowed: true,
+    customArrows: hintArrow ? [[hintArrow.from, hintArrow.to, 'rgba(250, 204, 21, 1)']] : [],
   }
   
   return (
@@ -490,15 +488,20 @@ export function PuzzleBoard() {
                 // Show hint: highlight the piece that should move
                 const currentPuzzle = puzzleRef.current
                 const expectedMove = currentPuzzle.solution[moveIndex]
+                console.log('Hint clicked - moveIndex:', moveIndex, 'expectedMove:', expectedMove)
+                console.log('Available moves:', gameRef.current.moves({ verbose: true }).map((m: Move) => m.san))
                 if (expectedMove) {
-                  // Extract source square from the move (e.g., 'Qg7+' -> 'g6' if Queen is on g6)
                   const game = gameRef.current
                   const moves = game.moves({ verbose: true })
                   const correctMove = moves.find((m: Move) => m.san === expectedMove)
+                  console.log('Found correctMove:', correctMove)
                   if (correctMove) {
-                    setHintSquare(correctMove.from)
+                    setHintArrow({ from: correctMove.from, to: correctMove.to })
+                    console.log('Hint arrow set to:', correctMove.from, '->', correctMove.to)
                     // Clear hint after 2 seconds
-                    setTimeout(() => setHintSquare(null), 2000)
+                    setTimeout(() => setHintArrow(null), 2000)
+                  } else {
+                    console.log('No matching move found for:', expectedMove)
                   }
                 }
               }}
