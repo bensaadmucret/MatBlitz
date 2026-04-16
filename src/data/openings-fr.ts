@@ -353,7 +353,7 @@ export function translatePGN(pgn: string): string {
   }
   
   // Remplacer chaque lettre de pièce (mais pas dans les coordonnées de cases)
-  let result = pgn
+  const result = pgn
     .replace(/([NBRQK])([a-h]?[1-8]?)/g, (_match, piece, square) => {
       // Ne remplacer que si c'est vraiment une pièce (suivie éventuellement d'une case)
       return pieceMap[piece] + square

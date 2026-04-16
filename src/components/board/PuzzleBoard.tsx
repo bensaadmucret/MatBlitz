@@ -72,18 +72,17 @@ export function PuzzleBoard() {
   }, [])
 
   // Handle square click — handles both piece selection and moves
-  function handleSquareClick({ piece, square }: { piece: { pieceType: string; square?: string } | null; square: string }) {
+  // Wrapped in useCallback for useMemo dependency stability
+  const handleSquareClick = useCallback(({ piece, square }: { piece: { pieceType: string; square?: string } | null; square: string }) => {
     if (status !== 'playing') return
 
     if (selectedSquare) {
-      // Same square → deselect
       if (square === selectedSquare) {
         setSelectedSquare(null)
         setLegalMoveSquares(new Set())
         return
       }
 
-      // Legal move target → execute move (capture or empty square)
       if (legalMoveSquares.has(square)) {
         handleMove(selectedSquare as string, square)
         setSelectedSquare(null)
@@ -91,35 +90,28 @@ export function PuzzleBoard() {
         return
       }
 
-      // Clicked on another piece
       if (piece?.pieceType) {
-        const isOwn = isOwnPiece(piece.pieceType)
-        if (isOwn) {
-          // Switch to new own piece
+        if (isOwnPiece(piece.pieceType)) {
           setSelectedSquare(square)
           setLegalMoveSquares(getLegalMoves(square))
         } else {
-          // Clicked opponent piece but not legal → deselect
           setSelectedSquare(null)
           setLegalMoveSquares(new Set())
         }
         return
       }
 
-      // Clicked empty square but not legal → deselect
       setSelectedSquare(null)
       setLegalMoveSquares(new Set())
     } else {
-      // No selection yet → try to select own piece
       if (piece?.pieceType) {
-        const isOwn = isOwnPiece(piece.pieceType)
-        if (isOwn) {
+        if (isOwnPiece(piece.pieceType)) {
           setSelectedSquare(square)
           setLegalMoveSquares(getLegalMoves(square))
         }
       }
     }
-  }
+  }, [status, selectedSquare, legalMoveSquares, handleMove, isOwnPiece, getLegalMoves])
 
   // Initialize puzzle
   const loadPuzzle = useCallback((p: Puzzle) => {
@@ -314,10 +306,10 @@ export function PuzzleBoard() {
   }
 
   // Wrapper for react-chessboard onPieceDrop
-  function onPieceDrop({ sourceSquare, targetSquare }: { piece?: unknown; sourceSquare: string; targetSquare: string | null }): boolean {
+  const onPieceDrop = useCallback(({ sourceSquare, targetSquare }: { piece?: unknown; sourceSquare: string; targetSquare: string | null }): boolean => {
     if (!targetSquare) return false
     return handleMove(sourceSquare, targetSquare)
-  }
+  }, [handleMove])
 
   const chessboardOptions = useMemo(() => ({
     position: fen,
