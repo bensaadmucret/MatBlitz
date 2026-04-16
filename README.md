@@ -12,9 +12,10 @@ MatBlitz est une app complète d'entraînement aux échecs. Résous des puzzles 
 - **Tailwind CSS v4** — Design dark mode soigné
 - **react-chessboard** — Échiquier interactif drag & drop
 - **chess.js** — Validation des coups et FEN
-- **Zustand** — State management + localStorage persistence
+- **Zustand** — State management
 - **Framer Motion** — Animations (combos, badges, transitions)
 - **Recharts** — Graphiques de progression
+- **Tauri** + **Rust** — Application desktop avec base SQLite locale
 
 ## Fonctionnalités
 

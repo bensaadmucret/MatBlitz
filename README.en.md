@@ -12,10 +12,10 @@ MatBlitz is a comprehensive chess training app. Solve mate-in-1 to mate-5 puzzle
 - **Tailwind CSS v4** — Polished dark mode design
 - **react-chessboard** — Interactive drag & drop chessboard
 - **chess.js** — Move validation and FEN handling
-- **Zustand** — State management + localStorage persistence
+- **Zustand** — State management
 - **Framer Motion** — Smooth animations (combos, badges, transitions)
 - **Recharts** — Progress charts
-- **Tauri** + **SQLite** — Desktop app with local database
+- **Tauri** + **Rust** + **SQLite** — Desktop app with local database
 
 ## Features
 
