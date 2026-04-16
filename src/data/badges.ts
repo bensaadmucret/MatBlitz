@@ -71,6 +71,49 @@ export const allBadges: Badge[] = [
     description: 'Résous 10 puzzles en moins de 30s chacun',
     condition: 'speed_10_under_30',
   },
+  // Opening badges
+  {
+    id: 'opening-novice',
+    name: 'Novice des Ouvertures',
+    emoji: '🌱',
+    description: 'Maîtrise ta première ouverture',
+    condition: 'opening_master_1',
+  },
+  {
+    id: 'opening-scholar',
+    name: 'Érudit',
+    emoji: '📖',
+    description: 'Maîtrise 10 ouvertures',
+    condition: 'opening_master_10',
+  },
+  {
+    id: 'opening-master-a',
+    name: 'Maître du Volume A',
+    emoji: '🅰️',
+    description: 'Maîtrise toutes les ouvertures A',
+    condition: 'opening_volume_a_complete',
+  },
+  {
+    id: 'opening-repertoire',
+    name: 'Répertoire Builder',
+    emoji: '🏗️',
+    description: '100 sessions en mode répertoire',
+    condition: 'opening_repertoire_100',
+  },
+  {
+    id: 'opening-recognition',
+    name: 'Mémoire d\'Éléphant',
+    emoji: '🐘',
+    description: '50 sessions en mode reconnaissance',
+    condition: 'opening_recognition_50',
+  },
+  {
+    id: 'opening-grandmaster',
+    name: 'Maître des Ouvertures',
+    emoji: '♟️',
+    description: 'Maîtrise 50 ouvertures',
+    condition: 'opening_master_50',
+  },
 ]
 
 export function checkBadgeUnlocks(

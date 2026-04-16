@@ -45,6 +45,34 @@ export async function initDB(): Promise<Database> {
       key TEXT PRIMARY KEY,
       value TEXT NOT NULL
     );
+
+    CREATE TABLE IF NOT EXISTS openings_progress (
+      eco TEXT PRIMARY KEY,
+      name TEXT NOT NULL,
+      volume TEXT NOT NULL,
+      attempts INTEGER NOT NULL DEFAULT 0,
+      successes INTEGER NOT NULL DEFAULT 0,
+      best_time_ms INTEGER,
+      last_trained_at INTEGER,
+      mastery_level INTEGER NOT NULL DEFAULT 0
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_openings_volume ON openings_progress(volume);
+    CREATE INDEX IF NOT EXISTS idx_openings_mastery ON openings_progress(mastery_level);
+
+    CREATE TABLE IF NOT EXISTS opening_sessions (
+      id INTEGER PRIMARY KEY AUTOINCREMENT,
+      eco TEXT NOT NULL,
+      mode TEXT NOT NULL,
+      success INTEGER NOT NULL,
+      time_ms INTEGER NOT NULL,
+      errors INTEGER NOT NULL DEFAULT 0,
+      completed_at INTEGER NOT NULL,
+      FOREIGN KEY (eco) REFERENCES openings_progress(eco)
+    );
+
+    CREATE INDEX IF NOT EXISTS idx_opening_sessions_eco ON opening_sessions(eco);
+    CREATE INDEX IF NOT EXISTS idx_opening_sessions_completed ON opening_sessions(completed_at);
   `)
 
   return db

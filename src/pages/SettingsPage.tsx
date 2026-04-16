@@ -65,7 +65,7 @@ export function SettingsPage() {
         <h3 className="font-semibold mb-2">À propos</h3>
         <p className="text-sm text-text-muted">
           MatBlitz ⚡ — Entraînement aux puzzles d'échecs avec gamification.
-          Source : 1000 Exercices et Puzzles d'Échecs + 1000 Exercices Mat en 2 (Vol. 2) + Lichess Puzzle Database
+          Source : Collection de puzzles d'échecs variés pour l'entraînement
         </p>
       </div>
       

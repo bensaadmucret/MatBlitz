@@ -1,5 +1,5 @@
 import { getDB } from './database'
-import type { PuzzleResult, DailyStreak, Badge } from '../types'
+import type { PuzzleResult, DailyStreak, Badge, OpeningProgress, OpeningSession } from '../types'
 
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // DbRow represents dynamic SQL query results where column names vary by query
@@ -267,4 +267,174 @@ export async function resetAllData(): Promise<void> {
   await db.execute('DELETE FROM badges')
   await db.execute('DELETE FROM daily_streak')
   await db.execute('DELETE FROM settings')
+  await db.execute('DELETE FROM openings_progress')
+  await db.execute('DELETE FROM opening_sessions')
+}
+
+// ===== OPENINGS =====
+
+export async function getOpeningProgress(): Promise<OpeningProgress[]> {
+  const db = getDB()
+  const rows = await db.select<DbRow[]>(
+    'SELECT eco, name, volume, attempts, successes, best_time_ms, last_trained_at, mastery_level FROM openings_progress'
+  )
+  return rows.map(row => ({
+    eco: row.eco as string,
+    name: row.name as string,
+    volume: row.volume as 'A' | 'B' | 'C' | 'D' | 'E',
+    attempts: row.attempts as number,
+    successes: row.successes as number,
+    successRate: row.attempts > 0 ? Math.round((row.successes / row.attempts) * 100) : 0,
+    bestTimeMs: row.best_time_ms as number | undefined,
+    lastTrainedAt: row.last_trained_at as number | undefined,
+    masteryLevel: row.mastery_level as 0 | 1 | 2 | 3 | 4 | 5,
+  }))
+}
+
+export async function getOpeningProgressByEco(eco: string): Promise<OpeningProgress | null> {
+  const db = getDB()
+  const rows = await db.select<DbRow[]>(
+    'SELECT eco, name, volume, attempts, successes, best_time_ms, last_trained_at, mastery_level FROM openings_progress WHERE eco = $1',
+    [eco]
+  )
+  if (rows.length === 0) return null
+  const row = rows[0]
+  return {
+    eco: row.eco as string,
+    name: row.name as string,
+    volume: row.volume as 'A' | 'B' | 'C' | 'D' | 'E',
+    attempts: row.attempts as number,
+    successes: row.successes as number,
+    successRate: row.attempts > 0 ? Math.round((row.successes / row.attempts) * 100) : 0,
+    bestTimeMs: row.best_time_ms as number | undefined,
+    lastTrainedAt: row.last_trained_at as number | undefined,
+    masteryLevel: row.mastery_level as 0 | 1 | 2 | 3 | 4 | 5,
+  }
+}
+
+export async function updateOpeningProgress(
+  eco: string,
+  name: string,
+  volume: string,
+  success: boolean,
+  timeMs: number
+): Promise<void> {
+  const db = getDB()
+  
+  // Get current progress
+  const current = await getOpeningProgressByEco(eco)
+  
+  const newAttempts = (current?.attempts || 0) + 1
+  const newSuccesses = (current?.successes || 0) + (success ? 1 : 0)
+  const newBestTime = current?.bestTimeMs ? Math.min(current.bestTimeMs, timeMs) : timeMs
+  
+  // Calculate mastery level
+  let masteryLevel: 0 | 1 | 2 | 3 | 4 | 5 = 0
+  const rate = newSuccesses / newAttempts
+  if (newAttempts < 3) masteryLevel = 0
+  else if (rate > 0.9 && newBestTime < 30000) masteryLevel = 5
+  else if (rate > 0.8) masteryLevel = 4
+  else if (rate > 0.7) masteryLevel = 3
+  else if (rate > 0.5) masteryLevel = 2
+  else masteryLevel = 1
+  
+  await db.execute(
+    `INSERT OR REPLACE INTO openings_progress 
+     (eco, name, volume, attempts, successes, best_time_ms, last_trained_at, mastery_level)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [eco, name, volume, newAttempts, newSuccesses, newBestTime, Date.now(), masteryLevel]
+  )
+}
+
+export async function insertOpeningSession(session: OpeningSession): Promise<void> {
+  const db = getDB()
+  await db.execute(
+    `INSERT INTO opening_sessions (eco, mode, success, time_ms, errors, completed_at)
+     VALUES ($1, $2, $3, $4, $5, $6)`,
+    [session.eco, session.mode, session.success ? 1 : 0, session.timeMs, session.errors, session.completedAt]
+  )
+}
+
+export async function getOpeningSessions(days: number = 90): Promise<OpeningSession[]> {
+  const db = getDB()
+  const since = Date.now() - days * 86400000
+  const rows = await db.select<DbRow[]>(
+    'SELECT id, eco, mode, success, time_ms, errors, completed_at FROM opening_sessions WHERE completed_at >= $1 ORDER BY completed_at DESC',
+    [since]
+  )
+  return rows.map(row => ({
+    id: row.id as number,
+    eco: row.eco as string,
+    mode: row.mode as 'repertoire' | 'recognition',
+    success: row.success === 1,
+    timeMs: row.time_ms as number,
+    errors: row.errors as number,
+    completedAt: row.completed_at as number,
+  }))
+}
+
+export async function getOpeningStats(): Promise<{
+  totalMastered: number
+  totalAttempted: number
+  averageSuccessRate: number
+  bestStreak: number
+  byVolume: Record<string, { total: number; mastered: number }>
+}> {
+  const db = getDB()
+  
+  const progressRows = await db.select<DbRow[]>(
+    'SELECT volume, mastery_level, COUNT(*) as cnt FROM openings_progress GROUP BY volume, mastery_level'
+  )
+  
+  const sessionsRows = await db.select<DbRow[]>(
+    'SELECT success FROM opening_sessions ORDER BY completed_at'
+  )
+  
+  const byVolume: Record<string, { total: number; mastered: number }> = {}
+  let totalMastered = 0
+  let totalAttempted = 0
+  
+  for (const row of progressRows) {
+    const vol = row.volume as string
+    if (!byVolume[vol]) byVolume[vol] = { total: 0, mastered: 0 }
+    byVolume[vol].total += row.cnt as number
+    if ((row.mastery_level as number) >= 4) {
+      byVolume[vol].mastered += row.cnt as number
+      totalMastered += row.cnt as number
+    }
+    totalAttempted += row.cnt as number
+  }
+  
+  // Calculate streak
+  let currentStreak = 0
+  let bestStreak = 0
+  let lastDate = ''
+  for (const row of sessionsRows) {
+    const date = new Date(row.completed_at as number).toISOString().split('T')[0]
+    if (row.success === 1) {
+      if (lastDate === '' || date === lastDate) {
+        currentStreak++
+      } else {
+        currentStreak = 1
+      }
+      bestStreak = Math.max(bestStreak, currentStreak)
+    } else {
+      currentStreak = 0
+    }
+    lastDate = date
+  }
+  
+  // Calculate average success rate
+  const progress = await getOpeningProgress()
+  const avgRate = progress.length > 0
+    ? progress.reduce((sum, p) => sum + p.successRate, 0) / progress.length
+    : 0
+  
+  return {
+    totalMastered,
+    totalAttempted,
+    averageSuccessRate: Math.round(avgRate),
+    bestStreak,
+    byVolume,
+  }
 }

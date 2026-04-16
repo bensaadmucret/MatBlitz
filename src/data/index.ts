@@ -13,26 +13,26 @@ export const categories: { key: PuzzleCategory; label: string; count: number }[]
 
 export const subcategories: Record<PuzzleCategory, { key: string; label: string }[]> = {
   'mat-en-1': [
-    { key: 'lichess', label: 'Lichess' },
+    { key: 'lichess', label: 'Mixte' },
     { key: 'dame', label: 'Dame' },
     { key: 'tour', label: 'Tour' },
     { key: 'cavalier', label: 'Cavalier' },
     { key: 'pion', label: 'Pion' },
   ],
   'mat-en-2': [
-    { key: 'lichess', label: 'Lichess' },
+    { key: 'lichess', label: 'Mixte' },
     { key: 'dame', label: 'Dame' },
     { key: 'divers', label: 'Divers' },
   ],
   'mat-en-3': [
-    { key: 'lichess', label: 'Lichess' },
+    { key: 'lichess', label: 'Mixte' },
     { key: 'divers', label: 'Divers' },
   ],
   'mat-en-4': [
-    { key: 'lichess', label: 'Lichess' },
+    { key: 'lichess', label: 'Mixte' },
     { key: 'divers', label: 'Divers' },
   ],
   'mat-en-5': [
-    { key: 'lichess', label: 'Lichess' },
+    { key: 'lichess', label: 'Mixte' },
   ],
 }
