@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { OpeningTrainer, OpeningLearner } from '../components/openings'
 import { useOpeningsStore } from '../stores/openingsStore'
-import type { OpeningMode, ChessOpening } from '../types'
+import type { OpeningMode } from '../types'
 
 export function OpeningTrainPage() {
   const { eco } = useParams<{ eco: string }>()
