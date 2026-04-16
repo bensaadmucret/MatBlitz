@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo } from 'react'
 import { useParams, useSearchParams, useNavigate } from 'react-router-dom'
 import { OpeningTrainer, OpeningLearner } from '../components/openings'
 import { useOpeningsStore } from '../stores/openingsStore'
@@ -9,36 +9,25 @@ export function OpeningTrainPage() {
   const [searchParams] = useSearchParams()
   const navigate = useNavigate()
   const { openings, loadOpenings } = useOpeningsStore()
-  const [opening, setOpening] = useState<ChessOpening | null>(null)
-  const [mode, setMode] = useState<OpeningMode>(() => {
+  const mode: OpeningMode = (() => {
     const modeParam = searchParams.get('mode') as OpeningMode
     if (modeParam === 'repertoire' || modeParam === 'recognition' || modeParam === 'learning') return modeParam
     return 'repertoire'
-  })
-  
+  })()
+
   useEffect(() => {
     loadOpenings()
   }, [loadOpenings])
   
-  useEffect(() => {
-    if (eco && openings.length > 0) {
-      // eco format is "A00-5" (ECO-index)
-      const [ecoCode, indexStr] = eco.split('-')
-      const index = indexStr ? parseInt(indexStr) : -1
-      
-      // Find all openings with this ECO
-      const matchingOpenings = openings.filter(o => o.eco === ecoCode)
-      
-      // Use index if provided, otherwise fallback to first match
-      if (index >= 0 && index < matchingOpenings.length) {
-        setOpening(matchingOpenings[index])
-      } else if (matchingOpenings.length > 0) {
-        setOpening(matchingOpenings[0])
-      } else {
-        navigate('/openings')
-      }
-    }
-  }, [eco, openings, navigate])
+  const opening = useMemo(() => {
+    if (!eco || openings.length === 0) return null
+    const [ecoCode, indexStr] = eco.split('-')
+    const index = indexStr ? parseInt(indexStr) : -1
+    const matchingOpenings = openings.filter(o => o.eco === ecoCode)
+    if (index >= 0 && index < matchingOpenings.length) return matchingOpenings[index]
+    if (matchingOpenings.length > 0) return matchingOpenings[0]
+    return null
+  }, [eco, openings])
   
   const handleComplete = () => {
     navigate('/openings')

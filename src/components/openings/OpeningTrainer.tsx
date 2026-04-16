@@ -39,6 +39,8 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
     setIsComplete(false)
     setShowName(mode === 'recognition')
     setOpponentJustMoved(false)
+    startTimeRef.current = Date.now()
+    setTimeElapsed(0)
   }, [opening, mode])
   
   // Make opponent move in repertoire mode
@@ -121,11 +123,16 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
     onAbandon()
   }
   
-  const progress = ((moveIndex) / opening.moves.length) * 100
-  // startTime is captured via useState initializer (pure)
-  // timeElapsed is displayed in JSX — derived from startTime + periodic re-renders from interactions
-  const timeElapsed = startTime ? Math.floor((Date.now() - startTime) / 1000) : 0
-  void timeElapsed
+  const progress = (moveIndex / opening.moves.length) * 100
+  
+  // Update elapsed time every second
+  useEffect(() => {
+    if (isComplete) return
+    const interval = setInterval(() => {
+      setTimeElapsed(Math.floor((Date.now() - startTimeRef.current) / 1000))
+    }, 1000)
+    return () => clearInterval(interval)
+  }, [isComplete])
   
   return (
     <div className="max-w-2xl mx-auto">
