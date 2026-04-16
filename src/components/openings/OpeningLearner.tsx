@@ -50,7 +50,7 @@ export function OpeningLearner({ opening, onComplete, onSkip }: OpeningLearnerPr
           setCurrentMoveIndex(prev => prev + 1)
           setShowMove(false)
         }
-      } catch (e) {
+      } catch {
         console.error('Invalid move:', move)
         setIsPlaying(false)
       }
@@ -89,7 +89,8 @@ export function OpeningLearner({ opening, onComplete, onSkip }: OpeningLearnerPr
 
   useEffect(() => {
     if (isPlaying && !showMove && currentMoveIndex < opening.moves.length) {
-      playNextMove()
+      const timer = setTimeout(() => playNextMove(), 0)
+      return () => clearTimeout(timer)
     } else if (currentMoveIndex >= opening.moves.length && isPlaying) {
       setIsPlaying(false)
     }

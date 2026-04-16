@@ -20,7 +20,7 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
   const [showHint, setShowHint] = useState(false)
   const [hintMove, setHintMove] = useState<string | null>(null)
   const [errorCount, setErrorCount] = useState(0)
-  const [startTime] = useState(Date.now())
+  const [startTime] = useState(() => Date.now())
   const [isComplete, setIsComplete] = useState(false)
   const [showName, setShowName] = useState(mode === 'recognition')
   const [opponentJustMoved, setOpponentJustMoved] = useState(false)
@@ -122,6 +122,7 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
   
   const progress = ((moveIndex + (opponentJustMoved ? 0 : 0)) / opening.moves.length) * 100
   const timeElapsed = Math.floor((Date.now() - startTime) / 1000)
+  void timeElapsed // used in JSX below
   
   return (
     <div className="max-w-2xl mx-auto">

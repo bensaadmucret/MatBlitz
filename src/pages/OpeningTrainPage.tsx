@@ -10,7 +10,11 @@ export function OpeningTrainPage() {
   const navigate = useNavigate()
   const { openings, loadOpenings } = useOpeningsStore()
   const [opening, setOpening] = useState<ChessOpening | null>(null)
-  const [mode, setMode] = useState<OpeningMode>('repertoire')
+  const [mode, setMode] = useState<OpeningMode>(() => {
+    const modeParam = searchParams.get('mode') as OpeningMode
+    if (modeParam === 'repertoire' || modeParam === 'recognition' || modeParam === 'learning') return modeParam
+    return 'repertoire'
+  })
   
   useEffect(() => {
     loadOpenings()
@@ -35,13 +39,6 @@ export function OpeningTrainPage() {
       }
     }
   }, [eco, openings, navigate])
-  
-  useEffect(() => {
-    const modeParam = searchParams.get('mode') as OpeningMode
-    if (modeParam === 'repertoire' || modeParam === 'recognition' || modeParam === 'learning') {
-      setMode(modeParam)
-    }
-  }, [searchParams])
   
   const handleComplete = () => {
     navigate('/openings')
