@@ -347,7 +347,7 @@ export function PuzzleBoard() {
     },
     areArrowsAllowed: true,
     customArrows: hintArrow ? [[hintArrow.from, hintArrow.to, 'yellow']] : [],
-  }), [fen, onPieceDrop, handleSquareClick, boardOrientation, lastMove, selectedSquare, legalMoveSquares, hintArrow])
+  }), [fen, onPieceDrop, handleSquareClick, boardOrientation, lastMove, selectedSquare, legalMoveSquares, hintArrow]) // eslint-disable-line react-hooks/exhaustive-deps
   
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto">

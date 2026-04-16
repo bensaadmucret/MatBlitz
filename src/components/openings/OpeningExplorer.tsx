@@ -34,7 +34,14 @@ export function OpeningExplorer({ onSelectOpening, onLoadingComplete }: OpeningE
   const { progress, isLoaded, loadOpenings, loadProgress, getFilteredOpenings, getStatsByVolume } = useOpeningsStore()
   const [filter, setFilter] = useState<OpeningFilter>('all')
   const [search, setSearch] = useState('')
+  // Derive page from filter/search: reset to 1 when they change
+  const pageResetKey = filter + search
   const [page, setPage] = useState(1)
+  const [prevKey, setPrevKey] = useState(pageResetKey)
+  if (pageResetKey !== prevKey) {
+    setPrevKey(pageResetKey)
+    setPage(1)
+  }
   
   useEffect(() => {
     loadOpenings()
@@ -47,15 +54,6 @@ export function OpeningExplorer({ onSelectOpening, onLoadingComplete }: OpeningE
       onLoadingComplete()
     }
   }, [isLoaded, onLoadingComplete])
-  
-  // Reset page when filter or search changes
-  const prevFilter = useRef(filter)
-  const prevSearch = useRef(search)
-  if (filter !== prevFilter.current || search !== prevSearch.current) {
-    prevFilter.current = filter
-    prevSearch.current = search
-    setPage(1)
-  }
   
   const filteredOpenings = useMemo(() => {
     return getFilteredOpenings(filter, search)

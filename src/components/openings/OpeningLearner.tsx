@@ -91,8 +91,6 @@ export function OpeningLearner({ opening, onComplete, onSkip }: OpeningLearnerPr
     if (isPlaying && !showMove && currentMoveIndex < opening.moves.length) {
       const timer = setTimeout(() => playNextMove(), 0)
       return () => clearTimeout(timer)
-    } else if (currentMoveIndex >= opening.moves.length && isPlaying) {
-      setIsPlaying(false)
     }
   }, [isPlaying, showMove, currentMoveIndex, opening.moves.length, playNextMove])
 
