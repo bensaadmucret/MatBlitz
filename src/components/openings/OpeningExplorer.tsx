@@ -1,4 +1,4 @@
-import { useState, useMemo, useEffect } from 'react'
+import { useState, useEffect } from 'react'
 import { OpeningCard } from './OpeningCard'
 import type { OpeningFilter } from '../../types'
 import { useOpeningsStore } from '../../stores/openingsStore'
@@ -31,7 +31,7 @@ const FILTERS: { key: OpeningFilter; label: string }[] = [
 const ITEMS_PER_PAGE = 24
 
 export function OpeningExplorer({ onSelectOpening, onLoadingComplete }: OpeningExplorerProps) {
-  const { progress, isLoaded, loadOpenings, loadProgress, getFilteredOpenings, getStatsByVolume } = useOpeningsStore()
+  const { openings, progress, isLoaded, loadOpenings, loadProgress, getFilteredOpenings, getStatsByVolume } = useOpeningsStore()
   const [filter, setFilter] = useState<OpeningFilter>('all')
   const [search, setSearch] = useState('')
   // Derive page from filter/search: reset to 1 when they change
@@ -55,20 +55,15 @@ export function OpeningExplorer({ onSelectOpening, onLoadingComplete }: OpeningE
     }
   }, [isLoaded, onLoadingComplete])
   
-  const filteredOpenings = useMemo(() => {
-    return getFilteredOpenings(filter, search)
-  }, [filter, search, getFilteredOpenings])
-  
+  // Compute directly on each render: store getters read the freshest state.
+  // useMemo with only the stable getter refs would keep the initial empty result
+  // (openings load asynchronously) and never recompute.
+  void openings // subscription: re-render when openings load
+  const filteredOpenings = getFilteredOpenings(filter, search)
   const totalPages = Math.ceil(filteredOpenings.length / ITEMS_PER_PAGE)
-  const paginatedOpenings = useMemo(() => {
-    const start = (page - 1) * ITEMS_PER_PAGE
-    return filteredOpenings.slice(start, start + ITEMS_PER_PAGE)
-  }, [filteredOpenings, page])
-  
-  const stats = useMemo(() => getStatsByVolume(), [getStatsByVolume])
-  const totalMastered = useMemo(() => 
-    Array.from(progress.values()).filter(p => p.masteryLevel >= 4).length,
-  [progress])
+  const paginatedOpenings = filteredOpenings.slice((page - 1) * ITEMS_PER_PAGE, page * ITEMS_PER_PAGE)
+  const stats = getStatsByVolume()
+  const totalMastered = Array.from(progress.values()).filter(p => p.masteryLevel >= 4).length
   
   if (!isLoaded) {
     return (

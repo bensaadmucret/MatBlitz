@@ -2,7 +2,7 @@ import { StrictMode, useEffect, useState } from 'react'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Layout } from './components/layout'
-import { HomePage, PlayPage, PuzzlesPage, StatsPage, BadgesPage, SettingsPage, OpeningsPage, OpeningTrainPage } from './pages'
+import { HomePage, PlayPage, PuzzlesPage, StatsPage, BadgesPage, SettingsPage, OpeningsPage, OpeningTrainPage, TrainingPage } from './pages'
 import { initDB } from './db'
 import { useGameStore } from './stores/gameStore'
 import './index.css'
@@ -51,6 +51,7 @@ export function App() {
           <Route path="play" element={<PlayPage />} />
           <Route path="openings" element={<OpeningsPage />} />
           <Route path="openings/train/:eco" element={<OpeningTrainPage />} />
+          <Route path="training" element={<TrainingPage />} />
           <Route path="puzzles" element={<PuzzlesPage />} />
           <Route path="stats" element={<StatsPage />} />
           <Route path="badges" element={<BadgesPage />} />

@@ -4,6 +4,8 @@ import { Chess } from 'chess.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import type { OpeningMode, ChessOpening } from '../../types'
 import { useOpeningsStore } from '../../stores/openingsStore'
+import { useStockfish } from '../../hooks/useStockfish'
+import type { MoveCoaching } from '../../utils/chessCoaching'
 
 interface OpeningTrainerProps {
   opening: ChessOpening
@@ -19,13 +21,18 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
   const [status, setStatus] = useState<'playing' | 'success' | 'error'>('playing')
   const [showHint, setShowHint] = useState(false)
   const [hintMove, setHintMove] = useState<string | null>(null)
+  const [hintArrow, setHintArrow] = useState<[string, string] | null>(null)
   const [errorCount, setErrorCount] = useState(0)
-  const startTimeRef = useRef(Date.now())
+  const startTimeRef = useRef(0)
   const [timeElapsed, setTimeElapsed] = useState(0)
   const [isComplete, setIsComplete] = useState(false)
   const [showName, setShowName] = useState(mode === 'recognition')
   const [opponentJustMoved, setOpponentJustMoved] = useState(false)
+  const [sfAdvice, setSfAdvice] = useState<string | null>(null)
+  const [sfCoaching, setSfCoaching] = useState<MoveCoaching | null>(null)
   const gameRef = useRef(new Chess())
+
+  const { isReady: sfReady, getCoaching: sfGetCoaching, formatEval, evalPercent } = useStockfish()
   
   // Reset game when opening changes
   useEffect(() => {
@@ -35,6 +42,7 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
     setStatus('playing')
     setShowHint(false)
     setHintMove(null)
+    setHintArrow(null)
     setErrorCount(0)
     setIsComplete(false)
     setShowName(mode === 'recognition')
@@ -45,30 +53,56 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
   
   // Make opponent move in repertoire mode
   useEffect(() => {
-    if (mode === 'repertoire' && opponentJustMoved && moveIndex > 0 && moveIndex < opening.moves.length) {
-      const opponentMove = opening.moves[moveIndex]
-      try {
-        const result = gameRef.current.move(opponentMove)
-        if (result) {
-          setFen(gameRef.current.fen())
-          setMoveIndex(prev => prev + 1)
-        }
-      } catch {
-        console.error('Invalid opponent move:', opponentMove)
-      }
+    if (mode !== 'repertoire' || !opponentJustMoved) return
+    if (moveIndex <= 0 || moveIndex >= opening.moves.length) {
       setOpponentJustMoved(false)
+      return
     }
-  }, [mode, opponentJustMoved, moveIndex, opening.moves])
+    const opponentMove = opening.moves[moveIndex]
+    try {
+      const result = gameRef.current.move(opponentMove)
+      if (result) {
+        setFen(gameRef.current.fen())
+        const nextIndex = moveIndex + 1
+        setMoveIndex(nextIndex)
+        if (nextIndex >= opening.moves.length) {
+          setIsComplete(true)
+          setStatus('success')
+          setTimeout(() => {
+            completeTraining({
+              eco: opening.eco,
+              name: opening.name,
+              volume: opening.volume,
+              mode,
+              errors: errorCount,
+              timeMs: Date.now() - startTimeRef.current,
+              success: errorCount === 0,
+            })
+            onComplete()
+          }, 1500)
+        }
+      }
+    } catch {
+      console.error('Invalid opponent move:', opponentMove)
+    }
+    setOpponentJustMoved(false)
+  }, [mode, opponentJustMoved, moveIndex, opening.moves, opening.eco, opening.name, opening.volume, errorCount, completeTraining, onComplete])
   
   const onDrop = useCallback(({ sourceSquare, targetSquare }: { sourceSquare: string; targetSquare: string | null }) => {
     if (isComplete || status === 'error') return false
     if (!targetSquare) return false
-    
-    const move = gameRef.current.move({
-      from: sourceSquare,
-      to: targetSquare,
-      promotion: 'q'
-    })
+
+    const fenBefore = gameRef.current.fen()
+    let move
+    try {
+      move = gameRef.current.move({
+        from: sourceSquare,
+        to: targetSquare,
+        promotion: 'q'
+      })
+    } catch {
+      return false
+    }
     
     if (!move) return false
     
@@ -87,7 +121,15 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
         setIsComplete(true)
         setStatus('success')
         setTimeout(() => {
-          completeTraining()
+          completeTraining({
+            eco: opening.eco,
+            name: opening.name,
+            volume: opening.volume,
+            mode,
+            errors: errorCount,
+            timeMs: Date.now() - startTimeRef.current,
+            success: errorCount === 0,
+          })
           onComplete()
         }, 1500)
       } else {
@@ -101,21 +143,58 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
       
       return true
     } else {
-      // Wrong move
+      // Wrong move — get Stockfish coaching
+      const isCheck = gameRef.current.inCheck()
+
       gameRef.current.undo()
       setStatus('error')
       setErrorCount(prev => prev + 1)
-      
-      setTimeout(() => setStatus('playing'), 500)
+
+      // Get Stockfish advice for the wrong move
+      if (sfReady) {
+        sfGetCoaching(fenBefore, { from: sourceSquare, to: targetSquare }, isCheck).then(c => {
+          setSfCoaching(c)
+          setSfAdvice(c.advice)
+        }).catch(() => {})
+      }
+
+      setTimeout(() => setStatus('playing'), 1500)
       return false
     }
-  }, [isComplete, status, moveIndex, opening.moves, mode, completeTraining, onComplete])
+  }, [isComplete, status, moveIndex, opening.moves, mode, completeTraining, onComplete, sfReady, sfGetCoaching])
   
   const handleHint = () => {
+    // Don't show hint while opponent is about to move (repertoire mode race condition)
+    if (opponentJustMoved) return
+
     const hint = opening.moves[moveIndex]
+    if (!hint) return
+
     setHintMove(hint)
     setShowHint(true)
-    setTimeout(() => setShowHint(false), 2000)
+    setSfAdvice(null)
+    setSfCoaching(null)
+
+    // Compute from/to squares for the arrow by replaying all moves up to moveIndex
+    try {
+      const gameCopy = new Chess()
+      for (let i = 0; i < moveIndex; i++) {
+        gameCopy.move(opening.moves[i])
+      }
+      const move = gameCopy.move(hint)
+      if (move) {
+        setHintArrow([move.from, move.to])
+      } else {
+        setHintArrow(null)
+      }
+    } catch {
+      setHintArrow(null)
+    }
+
+    setTimeout(() => {
+      setShowHint(false)
+      setHintArrow(null)
+    }, 2000)
   }
   
   const handleAbandon = () => {
@@ -144,7 +223,7 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
               {opening.eco}
             </span>
             <span className="text-xs text-text-muted">
-              {mode === 'repertoire' ? 'Mode Répertoire' : 'Mode Reconnaissance'}
+              {mode === 'repertoire' ? 'Mode Répertoire' : mode === 'recognition' ? 'Mode Reconnaissance' : 'Mode Apprentissage'}
             </span>
           </div>
           <h2 className="text-lg font-semibold mt-1">
@@ -177,7 +256,12 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
       
       {/* Chess board */}
       <div className={`relative ${status === 'error' ? 'animate-shake' : ''}`}>
-        <Chessboard options={{ position: fen, onPieceDrop: onDrop }} />
+        <Chessboard options={{
+          position: fen,
+          onPieceDrop: onDrop,
+          allowDrawingArrows: true,
+          arrows: hintArrow ? [{ startSquare: hintArrow[0], endSquare: hintArrow[1], color: 'rgba(255, 170, 0, 0.8)' }] : [],
+        }} />
         
         {/* Status overlay */}
         <AnimatePresence>
@@ -214,17 +298,65 @@ export function OpeningTrainer({ opening, mode, onComplete, onAbandon }: Opening
             <span className="text-sm font-medium">Coup attendu: {hintMove}</span>
           </motion.div>
         )}
+
+        {/* Stockfish advice on wrong move */}
+        <AnimatePresence>
+          {sfCoaching && status === 'playing' && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0 }}
+              className="mt-3 rounded-xl p-3 border"
+              style={{
+                backgroundColor: `${sfCoaching.color}15`,
+                borderColor: `${sfCoaching.color}50`,
+              }}
+            >
+              <div className="flex items-center gap-2 mb-1">
+                <span className="font-bold text-sm" style={{ color: sfCoaching.color }}>
+                  {sfCoaching.symbol && `${sfCoaching.symbol} `} {sfCoaching.label}
+                </span>
+                {sfCoaching.bestMoveSan && (
+                  <span className="text-xs text-text-muted">
+                    Meilleur: {sfCoaching.bestMoveSan}
+                  </span>
+                )}
+              </div>
+              <p className="text-xs text-text-secondary">{sfAdvice}</p>
+            </motion.div>
+          )}
+        </AnimatePresence>
       </div>
       
+      {/* Evaluation bar */}
+      {sfReady && (
+        <div className="mt-3 flex items-center gap-2">
+          <span className="text-xs text-text-muted w-12">Éval</span>
+          <div className="flex-1 h-2 bg-bg-elevated rounded-full overflow-hidden">
+            <div
+              className="h-full transition-all duration-300"
+              style={{
+                width: `${evalPercent()}%`,
+                background: 'linear-gradient(to right, #3b82f6, #60a5fa)',
+              }}
+            />
+          </div>
+          <span className="text-xs text-text-muted w-12 text-right font-mono">
+            {formatEval()}
+          </span>
+        </div>
+      )}
+
       {/* Controls */}
       <div className="mt-4 flex items-center justify-between">
         <div className="text-xs text-text-muted">
           {errorCount > 0 && <span className="text-red-400">{errorCount} erreurs</span>}
+          {sfReady && <span className="ml-2 text-blue-400">🧠 Stockfish actif</span>}
         </div>
-        
+
         <button
           onClick={handleHint}
-          disabled={showHint}
+          disabled={showHint || opponentJustMoved}
           className="btn btn-secondary text-sm px-4 py-2 disabled:opacity-50"
         >
           {showHint ? 'Indice actif' : 'Indice 💡'}

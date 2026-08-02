@@ -6,6 +6,7 @@ import { BadgeToast } from '../ui/BadgeToast'
 const navItems = [
   { to: '/', label: 'Accueil', icon: '🏠' },
   { to: '/play', label: 'Jouer', icon: '♟️' },
+  { to: '/training', label: 'IA', icon: '🤖' },
   { to: '/openings', label: 'Ouvertures', icon: '📚' },
   { to: '/puzzles', label: 'Puzzles', icon: '🧩' },
   { to: '/stats', label: 'Stats', icon: '📊' },

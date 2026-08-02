@@ -75,9 +75,13 @@ export function OpeningLearner({ opening, onComplete, onSkip }: OpeningLearnerPr
     const history: string[] = []
     
     for (let i = 0; i < index && i < opening.moves.length; i++) {
-      const result = gameRef.current.move(opening.moves[i])
-      if (result) {
-        history.push(result.san)
+      try {
+        const result = gameRef.current.move(opening.moves[i])
+        if (result) {
+          history.push(result.san)
+        }
+      } catch {
+        break
       }
     }
     

@@ -109909,5 +109909,503 @@
       "veryLong"
     ],
     "lichessId": "3fIB5"
+  },
+  {
+    "id": "game-dhafyd-001",
+    "fen": "r1bq1rk1/pp1pbppp/2n1pn2/2p3B1/3PP3/5Q1N/PPP2PPP/RN2KB1R b KQ - 0 7",
+    "solution": [
+      "Nxd4"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "cavalier",
+    "difficulty": 1,
+    "sideToMove": "black",
+    "source": "game-dhafyd",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-dhafyd-002",
+    "fen": "r1bq1rk1/pp1pbppp/4pn2/2p3B1/3nPQ2/7N/PPP2PPP/RN2KB1R b KQ - 1 8",
+    "solution": [
+      "Nxc2+",
+      "Kd2",
+      "Nxa1"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-dhafyd",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-dhafyd-003",
+    "fen": "r2q1rk1/pp3ppp/5b2/2pp4/5Q2/3B3P/PP1K1P1P/nN5R b - - 0 14",
+    "solution": [
+      "Bg5",
+      "Qxg5",
+      "Qxg5+"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "dame",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-dhafyd",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-m0ndy0-001",
+    "fen": "1rb2rk1/p3bpp1/2p4p/3pp3/4P1R1/2N2P2/PPP2P1P/2KR1B2 w - - 0 14",
+    "solution": [
+      "exd5"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "pion",
+    "difficulty": 2,
+    "sideToMove": "white",
+    "source": "game-m0ndy0",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-m0ndy0-002",
+    "fen": "1r3rk1/p3bpp1/7p/3pp3/6P1/2N5/PPP2P1P/2KR1B2 w - - 0 16",
+    "solution": [
+      "Nxd5",
+      "Bg5+",
+      "Kb1"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-m0ndy0",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-m0ndy0-003",
+    "fen": "1r1r2k1/p4pp1/7p/4p1b1/6P1/4N3/PPP2P1P/1K1R1B2 b - - 4 18",
+    "solution": [
+      "Bxe3",
+      "fxe3",
+      "Rxd1#"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-m0ndy0",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-majed-001",
+    "fen": "r1bq1rk1/ppp2ppp/2n1p2n/4P3/1bBP4/2N2N1P/PP3PP1/R1BQ1RK1 w - - 1 10",
+    "solution": [
+      "Bxh6"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "divers",
+    "difficulty": 2,
+    "sideToMove": "white",
+    "source": "game-majed",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-majed-002",
+    "fen": "r1bq1rk1/ppp2p1p/2n1p2p/4P3/1bBP4/2N2N1P/PP3PP1/R2Q1RK1 w - - 0 11",
+    "solution": [
+      "Ne4",
+      "f5",
+      "exf6"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-majed",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-majed-003",
+    "fen": "r1bq1r1k/p1p4p/3bpP1p/np6/3PN3/P4N1P/BP1Q1PP1/R4RK1 w - - 0 16",
+    "solution": [
+      "Qxh6",
+      "c6",
+      "Qg7#"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "dame",
+    "difficulty": 4,
+    "sideToMove": "white",
+    "source": "game-majed",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-majed-004",
+    "fen": "r1bq1r1k/p6p/2pbpP1Q/np6/3PN3/P4N1P/BP3PP1/R4RK1 w - - 0 17",
+    "solution": [
+      "Qg7#"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "dame",
+    "difficulty": 2,
+    "sideToMove": "white",
+    "source": "game-majed",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-abdel-001",
+    "fen": "r1bqkb1r/pp3ppp/2n2n2/2P1p3/3p4/2NQB3/PPP1PPPP/R3KBNR w KQkq - 0 8",
+    "solution": [
+      "Bxd4"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "divers",
+    "difficulty": 2,
+    "sideToMove": "white",
+    "source": "game-abdel",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-abdel-002",
+    "fen": "r3k2r/pp3ppp/5n2/2b1pb2/3nP3/2N5/PPP2PPP/1K1R1BNR b kq - 0 12",
+    "solution": [
+      "Nxe4"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "cavalier",
+    "difficulty": 2,
+    "sideToMove": "black",
+    "source": "game-abdel",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-abdel-003",
+    "fen": "r3k2r/pp3ppp/8/2b1pb2/3nn3/2NB4/PPP2PPP/1K1R2NR b kq - 1 13",
+    "solution": [
+      "Nxf2",
+      "Bxf5",
+      "Nxf5"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-abdel",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-abdel-004",
+    "fen": "2k4r/pp2n1pp/5p2/2b1p3/8/8/PPPr2PP/2K4R b - - 1 20",
+    "solution": [
+      "Rhd8",
+      "Rd1",
+      "Rxd1#"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-abdel",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-sjmoradi-001",
+    "fen": "1br2rk1/pb2q1pp/1p2p1n1/3pp3/P2P2P1/1PPB1NQ1/7P/B3RRK1 w - - 0 23",
+    "solution": [
+      "Bxg6",
+      "exd4",
+      "Bxh7+",
+      "Kxh7",
+      "Qh3+"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "fou",
+    "difficulty": 4,
+    "sideToMove": "white",
+    "source": "game-sjmoradi",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-sjmoradi-002",
+    "fen": "1br2rk1/pb2q1pp/1p2p1B1/3p4/P2p2P1/1PP2NQ1/7P/B3RRK1 w - - 0 24",
+    "solution": [
+      "Bxh7+",
+      "Kxh7",
+      "Qh3+"
+    ],
+    "category": "mat-en-2",
+    "subcategory": "fou",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-sjmoradi",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-sjmoradi-003",
+    "fen": "1b4k1/p5p1/1p2p3/3p4/P2PbqP1/1PB1R2Q/2rN3P/6K1 b - - 6 33",
+    "solution": [
+      "Rxc3",
+      "Rxc3",
+      "Qxd2"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-sjmoradi",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-sjmoradi-004",
+    "fen": "1b4k1/p5p1/1p2p3/3p4/P2Pb1P1/1PR4Q/3q3P/6K1 w - - 0 35",
+    "solution": [
+      "Rc8+",
+      "Kf7",
+      "Rxb8"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-sjmoradi",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-darkgifted-001",
+    "fen": "6r1/p2kpp2/2pp4/2p2Prn/P6p/1P1P3P/2P1NRPK/4R3 b - - 4 28",
+    "solution": [
+      "Ng3",
+      "f6",
+      "e5"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-darkgifted",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-darkgifted-002",
+    "fen": "1r6/R4p2/2ppk3/p3p3/P6p/3P2PP/2P1R2K/5r2 b - - 0 39",
+    "solution": [
+      "hxg3+",
+      "Kg2",
+      "Rc1"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-darkgifted",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-darkgifted-003",
+    "fen": "8/8/2p2k2/2R5/P1PP4/7P/2K2p2/3r2r1 b - - 3 52",
+    "solution": [
+      "f1=Q"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "pion",
+    "difficulty": 2,
+    "sideToMove": "black",
+    "source": "game-darkgifted",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-darkgifted-004",
+    "fen": "8/3k4/2P5/K7/P3q3/7P/8/1r4r1 b - - 0 62",
+    "solution": [
+      "Kxc6",
+      "Ka6",
+      "Qxa4#"
+    ],
+    "category": "mat-en-2",
+    "subcategory": "dame",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-darkgifted",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-krazy-001",
+    "fen": "r2q1rk1/pp2ppbp/2n2n2/3p1p2/3P1B2/2P2N1P/PP3PP1/RN1Q1RK1 w - - 0 11",
+    "solution": [
+      "Ne5"
+    ],
+    "category": "mat-en-1",
+    "subcategory": "cavalier",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-krazy",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-krazy-002",
+    "fen": "r2r4/p3kp1p/4p3/1p2P3/2p3P1/2P1KP2/PP6/3R1R2 w - - 0 23",
+    "solution": [
+      "Rh1",
+      "Rxd1",
+      "Rxd1"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 3,
+    "sideToMove": "white",
+    "source": "game-krazy",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-krazy-003",
+    "fen": "8/5p1p/pk1Kp3/1p2P1P1/2p5/2P2P2/PP6/8 w - - 3 30",
+    "solution": [
+      "Ke7",
+      "a5",
+      "Kxf7"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "roi",
+    "difficulty": 4,
+    "sideToMove": "white",
+    "source": "game-krazy",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-purpleberry-001",
+    "fen": "rr2nk2/3nppbp/3p2p1/2pP4/4PB2/2N2N1P/PP2RPP1/R5K1 b - - 0 17",
+    "solution": [
+      "Rxb2",
+      "Rxb2",
+      "Bxc3"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-purpleberry",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-purpleberry-002",
+    "fen": "3N4/7p/3p4/2pkp3/3n1p2/7P/1r4PK/3R4 b - - 1 44",
+    "solution": [
+      "f3",
+      "Nf7",
+      "Rxg2+"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-purpleberry",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-purpleberry-003",
+    "fen": "8/7p/3p4/4p1P1/3n2K1/4k3/5p2/8 b - - 1 58",
+    "solution": [
+      "f1=Q",
+      "Kh5",
+      "Qh3#"
+    ],
+    "category": "mat-en-2",
+    "subcategory": "pion",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-purpleberry",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-purpleberry-004",
+    "fen": "8/7p/3p4/4p1P1/3n4/4kpK1/8/8 b - - 0 57",
+    "solution": [
+      "f2",
+      "Kg4",
+      "f1=Q",
+      "Kh5",
+      "Qh3#"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "dame",
+    "difficulty": 5,
+    "sideToMove": "black",
+    "source": "game-purpleberry",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-chameleon-001",
+    "fen": "r1b1kb1r/p1p1pppp/2p5/4N3/2qP4/8/P1PB1PPP/R2Q1RK1 b kq - 3 11",
+    "solution": [
+      "Qxd4",
+      "Nxc6",
+      "Qd5"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "dame",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-chameleon",
+    "exerciseNumber": 1
+  },
+  {
+    "id": "game-chameleon-002",
+    "fen": "2b1kb1r/p1p1p1pp/1r2qp2/4N3/8/5Q2/P1PB1PPP/R3R1K1 w k - 0 18",
+    "solution": [
+      "Ng6",
+      "hxg6",
+      "Rxe6"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "cavalier",
+    "difficulty": 4,
+    "sideToMove": "white",
+    "source": "game-chameleon",
+    "exerciseNumber": 2
+  },
+  {
+    "id": "game-chameleon-003",
+    "fen": "4kb1r/pQp1p1p1/r3bpp1/8/8/4B3/P1P2PPP/R5K1 b k - 3 21",
+    "solution": [
+      "Rxa2",
+      "Rxa2",
+      "Bxa2"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-chameleon",
+    "exerciseNumber": 3
+  },
+  {
+    "id": "game-chameleon-004",
+    "fen": "8/2Pbpk2/1Q4p1/2B1bpp1/8/5P1P/4K1P1/2r5 b - - 6 34",
+    "solution": [
+      "Rc2+",
+      "Kd3",
+      "Rb2"
+    ],
+    "category": "mat-en-3",
+    "subcategory": "tour",
+    "difficulty": 4,
+    "sideToMove": "black",
+    "source": "game-chameleon",
+    "exerciseNumber": 4
+  },
+  {
+    "id": "game-chameleon-005",
+    "fen": "8/Q1Pbpk2/6p1/2B1bpp1/8/3K1P1P/1r4P1/8 b - - 10 36",
+    "solution": [
+      "Bb5+",
+      "Ke3",
+      "Re2#"
+    ],
+    "category": "mat-en-2",
+    "subcategory": "fou",
+    "difficulty": 3,
+    "sideToMove": "black",
+    "source": "game-chameleon",
+    "exerciseNumber": 5
   }
 ]

@@ -23,16 +23,19 @@ export function useTimer(mode: TimerMode, difficulty: number = 1) {
       setTimeRemaining(null)
     }
     
+    let lastTick = performance.now()
     const tick = () => {
       if (!startRef.current) return
       const now = performance.now()
+      const delta = now - lastTick
+      lastTick = now
       const elapsed = now - startRef.current
       setElapsedMs(elapsed)
       
       if (mode === 'blitz' || mode === 'survival') {
         setTimeRemaining(prev => {
           if (prev === null) return null
-          const newRemaining = prev - 16.67
+          const newRemaining = prev - delta
           if (newRemaining <= 0) {
             setIsRunning(false)
             return 0

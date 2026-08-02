@@ -39,6 +39,7 @@ export interface PuzzleResult {
   attempts: number
   timestamp: number
   comboBefore: number
+  difficulty: number
 }
 
 export interface DailyStreak {

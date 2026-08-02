@@ -21,7 +21,7 @@ interface OpeningsState {
   makeMove: (move: string) => { correct: boolean; nextMove?: string; complete?: boolean }
   useHint: () => string | null
   abandonTraining: () => void
-  completeTraining: () => Promise<void>
+  completeTraining: (completionData?: { eco: string; name: string; volume: 'A' | 'B' | 'C' | 'D' | 'E'; mode: OpeningMode; errors: number; timeMs: number; success: boolean }) => Promise<void>
   
   // Queries
   getProgressForEco: (eco: string) => OpeningProgress | undefined
@@ -179,25 +179,36 @@ export const useOpeningsStore = create<OpeningsState>()((set, get) => ({
     })
   },
   
-  completeTraining: async () => {
-    const { training, progress } = get()
-    if (!training.isTraining || !training.currentOpening) return
+  completeTraining: async (completionData) => {
+    const { progress } = get()
     
-    const { currentOpening, mode, isComplete, startTime, errors } = training
-    const timeMs = Date.now() - startTime
-    const success = isComplete && errors === 0
+    let eco: string, name: string, volume: 'A' | 'B' | 'C' | 'D' | 'E', mode: OpeningMode, errors: number, timeMs: number, success: boolean
+    
+    if (completionData) {
+      eco = completionData.eco
+      name = completionData.name
+      volume = completionData.volume
+      mode = completionData.mode
+      errors = completionData.errors
+      timeMs = completionData.timeMs
+      success = completionData.success
+    } else {
+      const { training } = get()
+      if (!training.isTraining || !training.currentOpening) return
+      eco = training.currentOpening.eco
+      name = training.currentOpening.name
+      volume = training.currentOpening.volume
+      mode = training.mode
+      errors = training.errors
+      timeMs = Date.now() - training.startTime
+      success = training.isComplete && errors === 0
+    }
     
     // Update database
-    await queries.updateOpeningProgress(
-      currentOpening.eco,
-      currentOpening.name,
-      currentOpening.volume,
-      success,
-      timeMs
-    )
+    await queries.updateOpeningProgress(eco, name, volume, success, timeMs)
     
     await queries.insertOpeningSession({
-      eco: currentOpening.eco,
+      eco,
       mode,
       success,
       timeMs,
@@ -206,10 +217,10 @@ export const useOpeningsStore = create<OpeningsState>()((set, get) => ({
     })
     
     // Update local progress map
-    const updatedProgress = await queries.getOpeningProgressByEco(currentOpening.eco)
+    const updatedProgress = await queries.getOpeningProgressByEco(eco)
     if (updatedProgress) {
       const newProgress = new Map(progress)
-      newProgress.set(currentOpening.eco, updatedProgress)
+      newProgress.set(eco, updatedProgress)
       set({ progress: newProgress })
     }
     

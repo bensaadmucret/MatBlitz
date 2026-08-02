@@ -146,6 +146,7 @@ export function PuzzleBoard() {
           attempts: 1,
           timestamp: Date.now(),
           comboBefore: currentCombo,
+          difficulty: p.difficulty,
         })
       }
     } catch (e) {
@@ -207,6 +208,7 @@ export function PuzzleBoard() {
           attempts: attempts + 1,
           timestamp: Date.now(),
           comboBefore: currentCombo,
+          difficulty: currentPuzzle.difficulty,
         })
         
         if (timerMode === 'survival') {
@@ -247,6 +249,7 @@ export function PuzzleBoard() {
                   attempts: attempts + 1,
                   timestamp: Date.now(),
                   comboBefore: currentCombo,
+                  difficulty: currentPuzzle.difficulty,
                 })
               }
             }
@@ -275,6 +278,7 @@ export function PuzzleBoard() {
           attempts: attempts + 1,
           timestamp: Date.now(),
           comboBefore: currentCombo,
+          difficulty: currentPuzzle.difficulty,
         })
         return false
       }
@@ -290,6 +294,7 @@ export function PuzzleBoard() {
           attempts: attempts + 1,
           timestamp: Date.now(),
           comboBefore: currentCombo,
+          difficulty: currentPuzzle.difficulty,
         })
       }
 
@@ -355,7 +360,7 @@ export function PuzzleBoard() {
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="glass rounded-lg px-3 py-1.5 text-sm font-medium">
-            {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : 'Mat en 4'}
+            {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : puzzle.category === 'mat-en-4' ? 'Mat en 4' : 'Mat en 5'}
           </span>
           <span className="text-text-muted text-sm">
             {/* Dériver du FEN car puzzle.sideToMove est incorrect dans les données Lichess */}

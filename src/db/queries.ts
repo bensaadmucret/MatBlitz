@@ -10,16 +10,16 @@ type DbRow = Record<string, any>
 export async function insertResult(result: PuzzleResult): Promise<void> {
   const db = getDB()
   await db.execute(
-    `INSERT INTO puzzle_results (puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp)
-     VALUES ($1, $2, $3, $4, $5, $6, $7)`,
-    [result.puzzleId, result.solved ? 1 : 0, result.timeMs, result.hintsUsed, result.attempts, result.comboBefore, result.timestamp]
+    `INSERT INTO puzzle_results (puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp, difficulty)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [result.puzzleId, result.solved ? 1 : 0, result.timeMs, result.hintsUsed, result.attempts, result.comboBefore, result.timestamp, result.difficulty]
   )
 }
 
 export async function getAllResults(): Promise<PuzzleResult[]> {
   const db = getDB()
   const rows = await db.select<DbRow[]>(
-    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results ORDER BY timestamp'
+    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp, difficulty FROM puzzle_results ORDER BY timestamp'
   )
   return rows.map(row => ({
     puzzleId: row.puzzle_id as string,
@@ -29,6 +29,7 @@ export async function getAllResults(): Promise<PuzzleResult[]> {
     attempts: row.attempts as number,
     comboBefore: row.combo_before as number,
     timestamp: row.timestamp as number,
+    difficulty: row.difficulty as number,
   }))
 }
 
@@ -75,7 +76,7 @@ export async function getFastestSolve(): Promise<number> {
 export async function getResultsByDateRange(startTs: number, endTs: number): Promise<PuzzleResult[]> {
   const db = getDB()
   const rows = await db.select<DbRow[]>(
-    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp FROM puzzle_results WHERE timestamp >= $1 AND timestamp <= $2 ORDER BY timestamp',
+    'SELECT puzzle_id, solved, time_ms, hints_used, attempts, combo_before, timestamp, difficulty FROM puzzle_results WHERE timestamp >= $1 AND timestamp <= $2 ORDER BY timestamp',
     [startTs, endTs]
   )
   return rows.map(row => ({
@@ -86,6 +87,7 @@ export async function getResultsByDateRange(startTs: number, endTs: number): Pro
     attempts: row.attempts as number,
     comboBefore: row.combo_before as number,
     timestamp: row.timestamp as number,
+    difficulty: row.difficulty as number,
   }))
 }
 
@@ -193,10 +195,17 @@ export async function unlockBadge(badge: Badge): Promise<void> {
 
 // ===== DAILY STREAK =====
 
+function localDateString(date: Date): string {
+  const y = date.getFullYear()
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const d = String(date.getDate()).padStart(2, '0')
+  return `${y}-${m}-${d}`
+}
+
 export async function getStreak(): Promise<DailyStreak> {
   const db = getDB()
   const rows = await db.select<DbRow[]>(`
-    SELECT date, puzzles_solved FROM daily_streak ORDER BY date DESC LIMIT 100
+    SELECT date, puzzles_solved FROM daily_streak ORDER BY date DESC LIMIT 400
   `)
 
   if (rows.length === 0) return { current: 0, longest: 0, lastDate: '' }
@@ -206,14 +215,16 @@ export async function getStreak(): Promise<DailyStreak> {
     count: row.puzzles_solved as number,
   }))
 
-  const today = new Date().toISOString().split('T')[0]
+  const solvedDays = new Set(entries.filter(e => e.count > 0).map(e => e.date))
+
+  // Current streak: count backwards from today (or yesterday if today not yet solved)
+  const today = localDateString(new Date())
   let current = 0
   const checkDate = new Date()
 
   for (let i = 0; i < 365; i++) {
-    const dateStr = checkDate.toISOString().split('T')[0]
-    const entry = entries.find(e => e.date === dateStr)
-    if (entry && entry.count > 0) {
+    const dateStr = localDateString(checkDate)
+    if (solvedDays.has(dateStr)) {
       current++
       checkDate.setDate(checkDate.getDate() - 1)
     } else if (dateStr === today) {
@@ -224,14 +235,34 @@ export async function getStreak(): Promise<DailyStreak> {
     }
   }
 
-  const longest = entries.length
+  // Longest streak: iterate all solved days sorted ascending, count consecutive runs
+  const sortedDays = [...solvedDays].sort()
+  let longest = 0
+  let run = 0
+  let prevDate: Date | null = null
+  for (const dayStr of sortedDays) {
+    const d = new Date(dayStr + 'T00:00:00')
+    if (prevDate) {
+      const diff = Math.round((d.getTime() - prevDate.getTime()) / 86400000)
+      if (diff === 1) {
+        run++
+      } else {
+        run = 1
+      }
+    } else {
+      run = 1
+    }
+    longest = Math.max(longest, run)
+    prevDate = d
+  }
+
   const lastDate = entries.length > 0 ? entries[0].date : ''
 
   return { current, longest, lastDate }
 }
 
 export async function recordDailySolve(): Promise<void> {
-  const today = new Date().toISOString().split('T')[0]
+  const today = localDateString(new Date())
   const db = getDB()
   await db.execute(
     'INSERT INTO daily_streak (date, puzzles_solved) VALUES ($1, 1) ON CONFLICT(date) DO UPDATE SET puzzles_solved = puzzles_solved + 1',
@@ -365,7 +396,7 @@ export async function getOpeningSessions(days: number = 90): Promise<OpeningSess
   return rows.map(row => ({
     id: row.id as number,
     eco: row.eco as string,
-    mode: row.mode as 'repertoire' | 'recognition',
+    mode: row.mode as 'repertoire' | 'recognition' | 'learning',
     success: row.success === 1,
     timeMs: row.time_ms as number,
     errors: row.errors as number,

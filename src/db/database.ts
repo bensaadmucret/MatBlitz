@@ -16,7 +16,8 @@ export async function initDB(): Promise<Database> {
       hints_used INTEGER NOT NULL DEFAULT 0,
       attempts INTEGER NOT NULL DEFAULT 0,
       combo_before INTEGER NOT NULL DEFAULT 0,
-      timestamp INTEGER NOT NULL DEFAULT 0
+      timestamp INTEGER NOT NULL DEFAULT 0,
+      difficulty INTEGER NOT NULL DEFAULT 1
     );
 
     CREATE INDEX IF NOT EXISTS idx_puzzle_results_puzzle_id ON puzzle_results(puzzle_id);
@@ -74,6 +75,9 @@ export async function initDB(): Promise<Database> {
     CREATE INDEX IF NOT EXISTS idx_opening_sessions_eco ON opening_sessions(eco);
     CREATE INDEX IF NOT EXISTS idx_opening_sessions_completed ON opening_sessions(completed_at);
   `)
+
+  // Migration: add difficulty column if upgrading from older schema
+  await db.execute('ALTER TABLE puzzle_results ADD COLUMN difficulty INTEGER NOT NULL DEFAULT 1').catch(() => {})
 
   return db
 }

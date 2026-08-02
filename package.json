@@ -7,7 +7,10 @@
     "dev": "vite",
     "build": "tsc -b && vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "tauri": "tauri",
+    "tauri:dev": "tauri dev",
+    "tauri:build": "tauri build"
   },
   "dependencies": {
     "@tailwindcss/vite": "^4.2.2",
@@ -19,6 +22,7 @@
     "react-dom": "^19.2.4",
     "react-router-dom": "^7.14.1",
     "recharts": "^3.8.1",
+    "stockfish": "^18.0.8",
     "tailwindcss": "^4.2.2",
     "zustand": "^5.0.12"
   },
