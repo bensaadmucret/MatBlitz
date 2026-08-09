@@ -56,6 +56,7 @@ interface GameState {
   }
   getUnlockedBadges: () => Promise<Badge[]>
   getSolvedPuzzleIds: () => Promise<Set<string>>
+  getDifficultyStats: () => Promise<{ difficulty: number; solved: number; attempted: number }[]>
 }
 
 const TIER_CONFIG: { tier: LevelTier; emoji: string; title: string; levels: number }[] = [
@@ -252,6 +253,7 @@ export const useGameStore = create<GameState>()((set, get) => ({
   getSolvedPuzzleIds: () => queries.getSolvedPuzzleIds(),
   getStreak: () => queries.getStreak(),
   getUnlockedBadges: () => queries.getUnlockedBadges(),
+  getDifficultyStats: () => queries.getDifficultyStats(),
 
   getLevelInfo: () => {
     const xp = get().totalXp

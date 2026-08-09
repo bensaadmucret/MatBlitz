@@ -149,6 +149,23 @@ export async function getCategoryStats(): Promise<{ category: string; solved: nu
   }))
 }
 
+export async function getDifficultyStats(): Promise<{ difficulty: number; solved: number; attempted: number }[]> {
+  const db = getDB()
+  const rows = await db.select<DbRow[]>(`
+    SELECT difficulty,
+      COUNT(DISTINCT CASE WHEN solved=1 THEN puzzle_id END) as solved,
+      COUNT(DISTINCT puzzle_id) as attempted
+    FROM puzzle_results
+    GROUP BY difficulty
+    ORDER BY difficulty
+  `)
+  return rows.map(row => ({
+    difficulty: row.difficulty as number,
+    solved: row.solved as number,
+    attempted: row.attempted as number,
+  }))
+}
+
 // ===== GAME STATE =====
 
 export async function getGameState(key: string): Promise<string | null> {

@@ -6,9 +6,31 @@ import { useGameStore } from '../../stores/gameStore'
 import { useTimer } from '../../hooks/useTimer'
 import { formatTime } from '../../utils/format'
 import { allPuzzles } from '../../data/index'
-import type { Puzzle } from '../../types'
+import type { Puzzle, Difficulty, PuzzleCategory } from '../../types'
 
-export function PuzzleBoard() {
+const DIFFICULTY_LABELS: Record<number, string> = {
+  1: 'Facile',
+  2: 'Modéré',
+  3: 'Difficile',
+  4: 'Très Difficile',
+  5: 'Expert',
+}
+
+const DIFFICULTY_COLORS: Record<number, string> = {
+  1: 'text-green-400',
+  2: 'text-blue-400',
+  3: 'text-yellow-400',
+  4: 'text-orange-400',
+  5: 'text-red-400',
+}
+
+interface PuzzleBoardProps {
+  difficulty?: Difficulty | 'all'
+  category?: PuzzleCategory
+  sub?: string
+}
+
+export function PuzzleBoard({ difficulty = 'all', category, sub }: PuzzleBoardProps) {
   const [puzzleIndex, setPuzzleIndex] = useState(0)
   const [fen, setFen] = useState('rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1')
   const gameRef = useRef(new Chess())
@@ -23,6 +45,8 @@ export function PuzzleBoard() {
   const [showComboAnimation, setShowComboAnimation] = useState(false)
   const [hintArrow, setHintArrow] = useState<{ from: string; to: string } | null>(null)
   const [hintMoveText, setHintMoveText] = useState<string | null>(null)
+  const [solvedIds, setSolvedIds] = useState<Set<string>>(new Set())
+  const [allCompleted, setAllCompleted] = useState(false)
   const puzzleRef = useRef(allPuzzles[0])
   
   const addResult = useGameStore(s => s.addResult)
@@ -33,19 +57,61 @@ export function PuzzleBoard() {
   const timerMode = useGameStore(s => s.timerMode)
   const totalXp = useGameStore(s => s.totalXp)
   const setIsPlaying = useGameStore(s => s.setIsPlaying)
-  
-  const puzzle = allPuzzles[puzzleIndex % allPuzzles.length]
+  const getSolvedPuzzleIds = useGameStore(s => s.getSolvedPuzzleIds)
+  const isLoaded = useGameStore(s => s.isLoaded)
+
+  // Load solved puzzle IDs from DB
+  useEffect(() => {
+    if (!isLoaded) return
+    getSolvedPuzzleIds().then(setSolvedIds)
+  }, [isLoaded, getSolvedPuzzleIds])
+
+  // Filter puzzles by difficulty, category, subcategory and exclude solved ones
+  const availablePuzzles = useMemo(() => {
+    let filtered = allPuzzles
+    if (category) {
+      filtered = filtered.filter(p => p.category === category)
+    }
+    if (sub) {
+      filtered = filtered.filter(p => p.subcategory === sub)
+    }
+    if (difficulty !== 'all') {
+      filtered = filtered.filter(p => p.difficulty === difficulty)
+    }
+    return filtered.filter(p => !solvedIds.has(p.id))
+  }, [difficulty, category, sub, solvedIds])
+
+  const totalInDifficulty = useMemo(() => {
+    let filtered = allPuzzles
+    if (category) {
+      filtered = filtered.filter(p => p.category === category)
+    }
+    if (sub) {
+      filtered = filtered.filter(p => p.subcategory === sub)
+    }
+    if (difficulty !== 'all') {
+      filtered = filtered.filter(p => p.difficulty === difficulty)
+    }
+    return filtered.length
+  }, [difficulty, category, sub])
+
+  const solvedCount = totalInDifficulty - availablePuzzles.length
+
+  const puzzle = availablePuzzles[puzzleIndex % Math.max(availablePuzzles.length, 1)] ?? allPuzzles[0]
 
   // Sync puzzle ref in effect to avoid render-time ref writes
   useEffect(() => {
     puzzleRef.current = puzzle
   })
 
-  // Log puzzle info on first render
+  // Reset index when difficulty, category, sub or solvedIds change
   useEffect(() => {
-    console.log('🧩 Puzzles:', allPuzzles.length, '| Current:', puzzle.id)
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+    setPuzzleIndex(0)
+    setAllCompleted(availablePuzzles.length === 0)
+    if (availablePuzzles.length > 0) {
+      loadPuzzle(availablePuzzles[0])
+    }
+  }, [difficulty, category, sub, solvedIds]) // eslint-disable-line
 
   // Sync isPlaying status with game state
   useEffect(() => {
@@ -155,7 +221,9 @@ export function PuzzleBoard() {
   }, [resetTimer, resetHints, start, stop, addResult, currentCombo])
   
   useEffect(() => {
-    loadPuzzle(puzzle)
+    if (availablePuzzles.length === 0) return
+    const p = availablePuzzles[puzzleIndex % availablePuzzles.length]
+    if (p) loadPuzzle(p)
   }, [puzzleIndex]) // eslint-disable-line
   
   // Handle player move (internal)
@@ -303,7 +371,16 @@ export function PuzzleBoard() {
   }
   
   const nextPuzzle = () => {
-    setPuzzleIndex(prev => prev + 1)
+    // Refresh solved IDs to skip newly solved puzzles
+    getSolvedPuzzleIds().then(ids => {
+      setSolvedIds(ids)
+      const remaining = availablePuzzles.filter(p => !ids.has(p.id))
+      if (remaining.length === 0) {
+        setAllCompleted(true)
+      } else {
+        setPuzzleIndex(prev => prev + 1)
+      }
+    })
   }
   
   const resetPuzzle = () => {
@@ -356,11 +433,56 @@ export function PuzzleBoard() {
   
   return (
     <div className="flex flex-col items-center gap-4 w-full max-w-lg mx-auto">
+      {/* All completed screen */}
+      {allCompleted ? (
+        <div className="w-full glass rounded-2xl p-8 text-center">
+          <div className="text-6xl mb-4">🏆</div>
+          <div className="text-2xl font-bold text-success mb-2">Tous les puzzles résolus !</div>
+          <div className="text-sm text-text-secondary mb-4">
+            {difficulty === 'all'
+              ? `Tu as résolu les ${totalInDifficulty} puzzles. Bravo !`
+              : `Tu as résolu tous les puzzles ${DIFFICULTY_LABELS[difficulty as number]}. Essaie un niveau supérieur !`}
+          </div>
+          <button
+            onClick={() => { setAllCompleted(false); setPuzzleIndex(0) }}
+            className="px-6 py-3 rounded-xl bg-accent-primary hover:bg-accent-secondary text-white font-semibold transition-colors"
+          >
+            Recommencer ↺
+          </button>
+        </div>
+      ) : (
+        <>
+      {/* Progress bar */}
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-1.5">
+          <span className="text-xs text-text-muted">
+            {difficulty !== 'all' && (
+              <span className={DIFFICULTY_COLORS[difficulty as number]}>
+                {DIFFICULTY_LABELS[difficulty as number]} ·
+              </span>
+            )} {' '}
+            {solvedCount}/{totalInDifficulty} résolus
+          </span>
+          <span className="text-xs text-text-muted">
+            {totalInDifficulty > 0 ? Math.round((solvedCount / totalInDifficulty) * 100) : 0}%
+          </span>
+        </div>
+        <div className="w-full h-2 bg-bg-elevated rounded-full overflow-hidden">
+          <div
+            className="h-full bg-accent-primary rounded-full transition-all duration-500"
+            style={{ width: totalInDifficulty > 0 ? `${(solvedCount / totalInDifficulty) * 100}%` : '0%' }}
+          />
+        </div>
+      </div>
+
       {/* Puzzle info */}
       <div className="w-full flex items-center justify-between">
         <div className="flex items-center gap-3">
           <span className="glass rounded-lg px-3 py-1.5 text-sm font-medium">
             {puzzle.category === 'mat-en-1' ? 'Mat en 1' : puzzle.category === 'mat-en-2' ? 'Mat en 2' : puzzle.category === 'mat-en-3' ? 'Mat en 3' : puzzle.category === 'mat-en-4' ? 'Mat en 4' : 'Mat en 5'}
+          </span>
+          <span className={`text-sm font-medium ${DIFFICULTY_COLORS[puzzle.difficulty]}`}>
+            {DIFFICULTY_LABELS[puzzle.difficulty]}
           </span>
           <span className="text-text-muted text-sm">
             {/* Dériver du FEN car puzzle.sideToMove est incorrect dans les données Lichess */}
@@ -545,6 +667,8 @@ export function PuzzleBoard() {
         <span>⭐</span>
         <span>{totalXp} XP total</span>
       </div>
+        </>
+      )}
     </div>
   )
 }
