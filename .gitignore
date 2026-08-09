@@ -3,3 +3,5 @@ dist/
 .vite/
 data/*.csv
 data/*.zst
+.DS_Store
+**/.DS_Store
